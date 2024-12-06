@@ -1,0 +1,9 @@
+[wokwi]
+version = 1
+firmware = 'build/flasher_args.json'
+elf = 'build/stamp_ring_factory_test.bin'
+gdbServerPort=3333
+
+[[chip]]
+name = 'mcp23017'
+binary = 'chips/mcp23017.chip.wasm'
