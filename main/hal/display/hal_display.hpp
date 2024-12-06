@@ -9,46 +9,34 @@
  * 
  */
 #pragma once
-// #include <M5GFX.h>
-// #include <lgfx/v1/panel/Panel_ST7789.hpp>
 
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
-
-
-
-#define LCD_MOSI_PIN 5
-#define LCD_MISO_PIN -1
-#define LCD_SCLK_PIN 6
-#define LCD_DC_PIN   4
-#define LCD_CS_PIN   7
-#define LCD_RST_PIN  8
-#define LCD_BUSY_PIN -1
-#define LCD_BL_PIN   9
-
+#include <lgfx/v1/panel/Panel_ILI9342.hpp>
+#include <lgfx/v1/touch/Touch_FT5x06.hpp>
 
 class LGFX_StampRing : public lgfx::LGFX_Device {
-    lgfx::Panel_GC9A01 _panel_instance;
+    lgfx::Panel_ILI9341 _panel_instance;
     lgfx::Bus_SPI _bus_instance;
     lgfx::Light_PWM _light_instance;
 
-   public:
-    LGFX_StampRing(void)
+public:
+  LGFX_StampRing(void) {
     {
         {
             auto cfg = _bus_instance.config();
 
-            cfg.spi_host = SPI3_HOST;
+            cfg.spi_host = SPI2_HOST;
             cfg.spi_mode = 0;
-            cfg.freq_write = 80000000;
+            cfg.freq_write = 40000000;
             cfg.freq_read = 16000000;
-            cfg.spi_3wire = true;
+            cfg.spi_3wire = false;
             cfg.use_lock = true;
-            cfg.dma_channel = SPI_DMA_CH_AUTO;
-            cfg.pin_sclk = LCD_SCLK_PIN;
-            cfg.pin_mosi = LCD_MOSI_PIN;
-            cfg.pin_miso = LCD_MISO_PIN;
-            cfg.pin_dc = LCD_DC_PIN;
+            cfg.dma_channel = 0;
+            cfg.pin_sclk = 36;  // SPI SCK pin
+            cfg.pin_mosi = 37;  // SPI MOSI pin
+            cfg.pin_miso = -1;  // SPI MISO pin (optional)
+            cfg.pin_dc = 35;     // Data/Command pin
 
             _bus_instance.config(cfg);
             _panel_instance.setBus(&_bus_instance);
@@ -57,19 +45,18 @@ class LGFX_StampRing : public lgfx::LGFX_Device {
         {
             auto cfg = _panel_instance.config();
 
-            cfg.pin_cs = LCD_CS_PIN;
-            cfg.pin_rst = LCD_RST_PIN;
-            cfg.pin_busy = LCD_BUSY_PIN;
+            cfg.pin_cs = 3;    // Chip select pin
+            cfg.pin_rst = (gpio_num_t)-1;    // Reset pin
+            cfg.pin_busy = -1;  // Busy pin (not used)
 
-            cfg.panel_width = 240;
+            cfg.panel_width = 320;
             cfg.panel_height = 240;
             cfg.offset_x = 0;
             cfg.offset_y = 0;
             cfg.offset_rotation = 0;
             cfg.dummy_read_pixel = 8;
             cfg.dummy_read_bits = 1;
-            cfg.readable = true;
-            cfg.invert = true;
+            cfg.invert = false;
             cfg.rgb_order = false;
             cfg.dlen_16bit = false;
             cfg.bus_shared = true;
@@ -80,7 +67,7 @@ class LGFX_StampRing : public lgfx::LGFX_Device {
         {
             auto cfg = _light_instance.config();
 
-            cfg.pin_bl = LCD_BL_PIN;
+            cfg.pin_bl = 33;   // Backlight pin
             cfg.invert = false;
             cfg.freq = 44100;
             cfg.pwm_channel = 7;
@@ -89,34 +76,34 @@ class LGFX_StampRing : public lgfx::LGFX_Device {
             _panel_instance.setLight(&_light_instance);
         }
 
-        // {
-        //     // 要修改LCD 初始化的RST 延时时间
-        //     auto cfg = _touch_instance.config();
-
-        //     cfg.x_min = 0;
-        //     cfg.x_max = LCD_HEIGHT;
-        //     cfg.y_min = 0;
-        //     cfg.y_max = LCD_WIDTH;
-        //     cfg.pin_int = TOUCH_IRQ;
-        //     cfg.pin_rst = TOUCH_RST;
-        //     cfg.bus_shared = true;
-        //     cfg.offset_rotation = 0;
-
-        //     cfg.i2c_port = TOUCH_I2C_PORT;
-        //     cfg.i2c_addr = TOUCH_I2C_ADDR;
-        //     cfg.pin_sda = TOUCH_SDA;
-        //     cfg.pin_scl = TOUCH_SCL;
-        //     cfg.freq = 100000;
-
-        //     _touch_instance.config(cfg);
-        //     _panel_instance.setTouch(&_touch_instance);
-        // }
-
         setPanel(&_panel_instance);
     }
+
+    { // Configure the touch controller
+      // auto cfg = _touch_instance.config();
+
+      // cfg.x_min = 0;
+      // cfg.x_max = 319;
+      // cfg.y_min = 0;
+      // cfg.y_max = 239;
+
+      // cfg.pin_int = -1;           // No interrupt pin
+      // cfg.bus_shared = false;     // I2C bus not shared
+      // cfg.offset_rotation = 0;
+
+      // cfg.i2c_port = I2C_NUM_0;   // Use I2C port 0 (adjust if needed)
+      // cfg.i2c_addr = 0x38;        // Default I2C address for FT6336
+      // cfg.pin_sda = 17;           // SDA pin (adjust to your configuration)
+      // cfg.pin_scl = 18;           // SCL pin (adjust to your configuration)
+      // cfg.freq = 400000;          // 400kHz I2C frequency
+
+      // _touch_instance.config(cfg); // Apply the touch configuration
+      // _panel_instance.setTouch(&_touch_instance); // Attach touch to panel
+    }
+
+    setPanel(&_panel_instance); // Attach panel to graphics driver
+  }
 };
-
-
 
 
 
