@@ -2050,6 +2050,13 @@ CONFIG_WIFI_PROV_STA_ALL_CHANNEL_SCAN=y
 # end of Wi-Fi Provisioning Manager
 
 #
+# LED strip SPI
+#
+CONFIG_LED_STRIP_SPI_USING_SK9822=y
+CONFIG_LED_STRIP_SPI_MUTEX_TIMEOUT_MS=1
+# end of LED strip SPI
+
+#
 # LVGL configuration
 #
 # CONFIG_LV_CONF_SKIP is not set

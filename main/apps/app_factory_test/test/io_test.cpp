@@ -9,12 +9,12 @@
  * 
  */
 #include "../app_factory_test.h"
-#include "../../utilities/rgb/io_test_rgb.h"
+
 #include "../../utilities/adc_read/adc_read.h"
 #include "../ft_common_define.h"
 
 
-static led_strip_handle_t _led_strip;
+//static led_strip_handle_t _led_strip;
 
 
 using namespace MOONCAKE::USER_APP;
@@ -71,25 +71,25 @@ void FactoryTest::_io_test()
     
         led_light_num = adc_read_buffer / 500;
 
-        for (int i = 0; i < 14; i++)
-        {
-            // led_strip_set_pixel(_led_strip, i, 12, 123, 12);
-            // led_strip_set_pixel(_led_strip, (13 - i), 12, 123, 12);
+        // for (int i = 0; i < 14; i++)
+        // {
+        //     // led_strip_set_pixel(_led_strip, i, 12, 123, 12);
+        //     // led_strip_set_pixel(_led_strip, (13 - i), 12, 123, 12);
 
-            if (i <= led_light_num)
-            {
-                led_strip_set_pixel(_led_strip, i, 1, 23, 1);
-            }
-            else if ((13 - i) <= led_light_num)
-            {
-                led_strip_set_pixel(_led_strip, i, 1, 23, 1);
-            }
-            else 
-            {
-                led_strip_set_pixel(_led_strip, i, 0, 0, 0);
-            }
-        }
-        led_strip_refresh(_led_strip);
+        //     if (i <= led_light_num)
+        //     {
+        //         led_strip_set_pixel(_led_strip, i, 1, 23, 1);
+        //     }
+        //     else if ((13 - i) <= led_light_num)
+        //     {
+        //         led_strip_set_pixel(_led_strip, i, 1, 23, 1);
+        //     }
+        //     else 
+        //     {
+        //         led_strip_set_pixel(_led_strip, i, 0, 0, 0);
+        //     }
+        // }
+        // led_strip_refresh(_led_strip);
         
 
         // _log("%d %d", led_light_num, adc_read_buffer);
@@ -206,7 +206,7 @@ void FactoryTest::_io_test_rgb_init()
 
     // led_strip_handle_t led_shit = rgb_configure_led();
 
-    _led_strip = rgb_configure_led();
+    //_led_strip = rgb_configure_led();
 
     
 
