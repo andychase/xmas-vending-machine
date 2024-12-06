@@ -171,6 +171,12 @@ void Launcher::_launcher_loop()
             }
         }
     }
+
+    MOONCAKE::APP_BASE* app_ptr = new MOONCAKE::USER_APP::Xmas;
+    _simple_app_manager(app_ptr);
+
+    /* Free app */
+    delete app_ptr;
 }
 
 
