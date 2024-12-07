@@ -1,43 +1,38 @@
-
 #include "app_xmas.h"
 #include "../common_define.h"
 
 
 using namespace MOONCAKE::USER_APP;
 
-#define LED_COUNT 144             // Number of LEDs in the strip
-#define CLOCK_PIN 2              // GPIO for clock input (CI)
-#define DATA_PIN 1              // GPIO for data input (DI)
-#define SPI_CLOCK_SPEED_HZ 5000000 // SPI Clock speed (3 MHz)
+#define LED_COUNT 15 // Number of LEDs in the strip
+#define CLOCK_PIN 1   // GPIO for clock input (CLK)
+#define DATA_PIN 2    // GPIO for data input (MOSI)
+#define SPI_CLOCK_SPEED_HZ 1000000 // SPI Clock speed (1 MHz)
+
+// APA102 device configuration
+
 
 // Function to generate rainbow colors
-rgb_t color_wheel(uint8_t pos) {
+void color_wheel(uint8_t pos, uint8_t &red, uint8_t &green, uint8_t &blue) {
     pos = 255 - pos;
     if (pos < 85) {
-        return (rgb_t){
-            .red = (uint8_t)(255 - pos * 3),
-            .green = 0,
-            .blue = (uint8_t)(pos * 3)
-        };
+        red = (uint8_t)(255 - pos * 3);
+        green = 0;
+        blue = (uint8_t)(pos * 3);
     } else if (pos < 170) {
         pos -= 85;
-        return (rgb_t){
-            .red = 0,
-            .green = (uint8_t)(pos * 3),
-            .blue = (uint8_t)(255 - pos * 3)
-        };
+        red = 0;
+        green = (uint8_t)(pos * 3);
+        blue = (uint8_t)(255 - pos * 3);
     } else {
         pos -= 170;
-        return (rgb_t){
-            .red = (uint8_t)(pos * 3),
-            .green = (uint8_t)(255 - pos * 3),
-            .blue = 0
-        };
+        red = (uint8_t)(pos * 3);
+        green = (uint8_t)(255 - pos * 3);
+        blue = 0;
     }
 }
 
-void Xmas::onSetup()
-{
+void Xmas::onSetup() {
     setAppName("Xmas");
     setAllowBgRunning(false);
 
@@ -45,16 +40,13 @@ void Xmas::onSetup()
     XMAS::Data_t default_data;
     _data = default_data;
 
-    _data.hal = (HAL::HAL*)getUserData();
-    
+    _data.hal = (HAL::HAL *)getUserData();
 }
 
-
 /* Life cycle */
-void Xmas::onCreate()
-{
+void Xmas::onCreate() {
     _log("onCreate");
-    LGFX_Sprite* canvas = _data.hal->canvas;
+    LGFX_Sprite *canvas = _data.hal->canvas;
     canvas->clear();
     canvas->setTextSize(1.5);
     canvas->setTextColor((uint32_t)0xF3E9D2);
@@ -63,96 +55,25 @@ void Xmas::onCreate()
     canvas->pushSprite(0, 0);
     canvas->setTextSize(1);
 
-    esp_err_t ret;
+    // Initialize the APA102 device
+    led_strip_device.clock_speed_hz = SPI_CLOCK_SPEED_HZ;
+    led_strip_device.mosi = DATA_PIN;
+    led_strip_device.clk = CLOCK_PIN;
+    led_strip_device.cs = -1; // Not used for APA102
 
-    // Step 1: Install the driver
-    ret = led_strip_spi_install();
-    if (ret != ESP_OK) {
-        printf("Failed to install SPI LED strip driver. Error: %d\n", ret);
-        return;
+    apa102_init(&led_strip_device);
+
+    // Set all LEDs to white initially
+    for (int i = 0; i < LED_COUNT; i++) {
+        apa102_set_pixel(i, 31, 255, 255, 255); // Brightness: 31, RGB: White
     }
-
-    // Step 2: Create and initialize the strip descriptor
-    strip = LED_STRIP_SPI_DEFAULT_ESP32();
-    strip.length = LED_COUNT;  // Set the number of LEDs
-    strip.mosi_io_num = DATA_PIN;   // Set the Data pin (DI)
-    strip.sclk_io_num = CLOCK_PIN; // Set the Clock pin (CI)
-    strip.max_transfer_sz = LED_STRIP_SPI_BUFFER_SIZE(LED_COUNT);
-    strip.clock_speed_hz = SPI_CLOCK_SPEED_HZ;
-    strip.host_device = SPI2_HOST;
-
-    // Step 3: Initialize the LED strip
-    
-    ret = led_strip_spi_init((led_strip_spi_t*)&strip);
-    if (ret != ESP_OK) {
-        printf("Failed to initialize SPI LED strip. Error: %d\n", ret);
-        return;
-    }
-
-    // Step 4: Set all LEDs to white
-    rgb_t white_color = { .red = 255, .green = 255, .blue = 255 }; // RGB value for white
-    ret = led_strip_spi_fill((led_strip_spi_t*)&strip, 0, LED_COUNT, white_color);
-    if (ret != ESP_OK) {
-        printf("Failed to set LED colors. Error: %d\n", ret);
-        return;
-    }
-
-    // Step 5: Flush the buffer to apply the color
-    ret = led_strip_spi_flush((led_strip_spi_t*)&strip);
-    if (ret != ESP_OK) {
-        printf("Failed to flush LED buffer. Error: %d\n", ret);
-        return;
-    }
+    apa102_flush();
 
     printf("LEDs initialized and set to white successfully.\n");
-
-
-    
-// #define NUMPIXELS 15 // Number of LEDs in strip
-
-// // Here's how to control the LEDs from any two pins:
-// #define DATAPIN    8
-// #define CLOCKPIN   9
-// Adafruit_DotStar strip(NUMPIXELS, DATAPIN, CLOCKPIN, DOTSTAR_BRG);
-// // The last parameter is optional -- this is the color data order of the
-// // DotStar strip, which has changed over time in different production runs.
-// // Your code just uses R,G,B colors, the library then reassigns as needed.
-// // Default is DOTSTAR_BRG, so change this if you have an earlier strip.
-
-// // Hardware SPI is a little faster, but must be wired to specific pins
-// // (Arduino Uno = pin 11 for data, 13 for clock, other boards are different).
-// //Adafruit_DotStar strip(NUMPIXELS, DOTSTAR_BRG);
-
-
-// strip.begin(); // Initialize pins for output
-// strip.show();  // Turn all LEDs off ASAP
-
-// // Runs 10 LEDs at a time along strip, cycling through red, green and blue.
-// // This requires about 200 mA for all the 'on' pixels + 1 mA per 'off' pixel.
-
-// int      head  = 0, tail = -10; // Index of first 'on' and 'off' pixels
-// uint32_t color = 0xFF0000;      // 'On' color (starts red)
-
-//     while (1) {
-
-//     strip.setPixelColor(head, color); // 'On' pixel at head
-//     strip.setPixelColor(tail, 0);     // 'Off' pixel at tail
-//     strip.show();                     // Refresh strip
-//     delay(20);                        // Pause 20 milliseconds (~50 FPS)
-
-//     if(++head >= NUMPIXELS) {         // Increment head index.  Off end of strip?
-//         head = 0;                       //  Yes, reset head index to start
-//         if((color >>= 8) == 0)          //  Next color (R->G->B) ... past blue now?
-//         color = 0xFF0000;             //   Yes, reset to red
-//     }
-//     if(++tail >= NUMPIXELS) tail = 0; // Increment, reset tail index
-//     }
 }
 
-
-void Xmas::onRunning()
-{
-    LGFX_Sprite* canvas = _data.hal->canvas;
+void Xmas::onRunning() {
+    LGFX_Sprite *canvas = _data.hal->canvas;
     canvas->clear();
     canvas->setTextSize(1.5);
     canvas->setTextColor((uint32_t)0xF3E9D2);
@@ -163,24 +84,22 @@ void Xmas::onRunning()
 
     // Set each LED to a color from the color wheel
     for (int i = 0; i < LED_COUNT; i++) {
-        rgb_t color = color_wheel((hue + (i * 256 / LED_COUNT)) & 255);
-        led_strip_spi_set_pixel(&strip, i, color);
+        uint8_t red, green, blue;
+        color_wheel((hue + (i * 256 / LED_COUNT)) & 255, red, green, blue);
+        apa102_set_pixel(i, 31, red, green, blue); // Brightness: 31
     }
 
     // Flush the buffer to update LEDs
-    esp_err_t ret = led_strip_spi_flush(&strip);
-    if (ret != ESP_OK) {
-        printf("Failed to flush LED buffer. Error: %d\n", ret);
-    }
+    apa102_flush();
 
     // Increment hue for the next frame
     hue++;
 
     // Delay to control the animation speed
-    delay(10);
+    delay(100);
+
     /* If button pressed */
-    if (!_data.hal->encoder.btn.read())
-    {
+    if (!_data.hal->encoder.btn.read()) {
         /* Hold until button release */
         while (!_data.hal->encoder.btn.read())
             delay(5);
@@ -190,10 +109,6 @@ void Xmas::onRunning()
     }
 }
 
-
-void Xmas::onDestroy()
-{
-
+void Xmas::onDestroy() {
     _log("onDestroy");
-
 }
