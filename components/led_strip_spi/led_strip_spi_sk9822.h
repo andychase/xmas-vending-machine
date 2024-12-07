@@ -67,8 +67,7 @@ extern "C" {
 #define LED_STRIP_SPI_BUFFER_SIZE(N_PIXEL) (\
         LED_STRIP_SPI_FRAME_SK9822_START_SIZE + \
         LED_STRIP_SPI_FRAME_SK9822_LEDS_SIZE(N_PIXEL)  + \
-        LED_STRIP_SPI_FRAME_SK9822_RESET_SIZE + \
-        LED_STRIP_SPI_FRAME_SK9822_END_SIZE(N_PIXEL)) ///< A macro to caliculate required size of buffer. `N_PIXEL` is the number of pixels in the strip.
+        LED_STRIP_SPI_FRAME_SK9822_RESET_SIZE) ///< A macro to caliculate required size of buffer. `N_PIXEL` is the number of pixels in the strip.
 
 /**
  * @brief Initialize the buffer of SK9822 strip.

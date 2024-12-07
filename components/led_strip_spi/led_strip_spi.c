@@ -93,7 +93,7 @@ static esp_err_t led_strip_spi_init_esp32(led_strip_spi_t *strip)
     };
     spi_device_interface_config_t device_interface_config = {
         .clock_speed_hz = strip->clock_speed_hz,
-        .mode = 0,
+        .mode = 3,
         .spics_io_num = -1,
         .queue_size = strip->queue_size,
         .command_bits = 0,
@@ -113,7 +113,8 @@ static esp_err_t led_strip_spi_init_esp32(led_strip_spi_t *strip)
         err = ESP_ERR_NO_MEM;
         goto fail;
     }
-    memset(strip->buf, 0, LED_STRIP_SPI_BUFFER_SIZE(strip->length));
+    memset(strip->buf, 0xFF, LED_STRIP_SPI_BUFFER_SIZE(strip->length));
+    memset(strip->buf, 0, LED_STRIP_SPI_BUFFER_SIZE(strip->length)-4);
 
     /* XXX length is in bit */
     strip->transaction.length = LED_STRIP_SPI_BUFFER_SIZE(strip->length) * 8;

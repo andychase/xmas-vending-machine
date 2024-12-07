@@ -30,6 +30,8 @@
  * @{
  *
  */
+#ifndef __LED_STRIP_SPI_H__
+#define __LED_STRIP_SPI_H__
 
 #include <driver/gpio.h>
 #include <esp_err.h>
@@ -189,3 +191,7 @@ esp_err_t led_strip_spi_fill_brightness(led_strip_spi_t*strip, size_t start, siz
 #ifdef __cplusplus
 }
 #endif
+
+/**@}*/
+
+#endif /* __LED_STRIP_SPI_H__ */
