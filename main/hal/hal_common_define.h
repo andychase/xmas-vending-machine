@@ -14,8 +14,8 @@
 #define HAL_PIN_PWR_HOLDING     46
 #define HAL_PIN_PWR_WAKE_UP     42
 
-#define HAL_PIN_ENCODER_A       41
-#define HAL_PIN_ENCODER_B       40
+#define HAL_PIN_ENCODER_A       12
+#define HAL_PIN_ENCODER_B       11
 
 #define HAL_PIN_TP_I2C_SCL      12
 #define HAL_PIN_TP_I2C_SDA      11
