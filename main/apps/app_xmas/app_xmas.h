@@ -2,7 +2,8 @@
 #pragma once
 #include "../app.h"
 #include "../../hal/hal.h"
-
+#define HELPER_TARGET_IS_ESP32
+#include <led_strip_spi.h>
 
 // const unsigned long speed = 100;
 // const byte brightness = 80;
@@ -31,6 +32,8 @@ namespace MOONCAKE
         {
             private:
                 const char* _tag = "XMAS";
+                led_strip_spi_esp32_t strip;
+                 uint8_t hue = 0;
             public:
                 XMAS::Data_t _data;
 

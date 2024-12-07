@@ -1,16 +1,40 @@
 
 #include "app_xmas.h"
 #include "../common_define.h"
-#define HELPER_TARGET_IS_ESP32
-#include <led_strip_spi.h>
+
 
 using namespace MOONCAKE::USER_APP;
 
-#define LED_COUNT 15             // Number of LEDs in the strip
-#define CLOCK_PIN 9              // GPIO for clock input (CI)
-#define DATA_PIN 8               // GPIO for data input (DI)
-#define SPI_CLOCK_SPEED_HZ 3000000 // SPI Clock speed (3 MHz)
+#define LED_COUNT 144             // Number of LEDs in the strip
+#define CLOCK_PIN 2              // GPIO for clock input (CI)
+#define DATA_PIN 1              // GPIO for data input (DI)
+#define SPI_CLOCK_SPEED_HZ 5000000 // SPI Clock speed (3 MHz)
 
+// Function to generate rainbow colors
+rgb_t color_wheel(uint8_t pos) {
+    pos = 255 - pos;
+    if (pos < 85) {
+        return (rgb_t){
+            .red = (uint8_t)(255 - pos * 3),
+            .green = 0,
+            .blue = (uint8_t)(pos * 3)
+        };
+    } else if (pos < 170) {
+        pos -= 85;
+        return (rgb_t){
+            .red = 0,
+            .green = (uint8_t)(pos * 3),
+            .blue = (uint8_t)(255 - pos * 3)
+        };
+    } else {
+        pos -= 170;
+        return (rgb_t){
+            .red = (uint8_t)(pos * 3),
+            .green = (uint8_t)(255 - pos * 3),
+            .blue = 0
+        };
+    }
+}
 
 void Xmas::onSetup()
 {
@@ -49,15 +73,16 @@ void Xmas::onCreate()
     }
 
     // Step 2: Create and initialize the strip descriptor
-    led_strip_spi_esp32_t strip = LED_STRIP_SPI_DEFAULT_ESP32();
+    strip = LED_STRIP_SPI_DEFAULT_ESP32();
     strip.length = LED_COUNT;  // Set the number of LEDs
     strip.mosi_io_num = DATA_PIN;   // Set the Data pin (DI)
     strip.sclk_io_num = CLOCK_PIN; // Set the Clock pin (CI)
     strip.max_transfer_sz = LED_STRIP_SPI_BUFFER_SIZE(LED_COUNT);
     strip.clock_speed_hz = SPI_CLOCK_SPEED_HZ;
-    strip.host_device = SPI3_HOST;
+    strip.host_device = SPI2_HOST;
 
     // Step 3: Initialize the LED strip
+    
     ret = led_strip_spi_init((led_strip_spi_t*)&strip);
     if (ret != ESP_OK) {
         printf("Failed to initialize SPI LED strip. Error: %d\n", ret);
@@ -127,12 +152,48 @@ void Xmas::onCreate()
 
 void Xmas::onRunning()
 {
-    
+    LGFX_Sprite* canvas = _data.hal->canvas;
+    canvas->clear();
+    canvas->setTextSize(1.5);
+    canvas->setTextColor((uint32_t)0xF3E9D2);
+    canvas->setFont(&fonts::efontCN_24);
+    canvas->drawCenterString("XMAS", _data.hal->display.width() / 2, _data.hal->display.height() / 2 - 24);
+    canvas->pushSprite(0, 0);
+    canvas->setTextSize(1);
+
+    // Set each LED to a color from the color wheel
+    for (int i = 0; i < LED_COUNT; i++) {
+        rgb_t color = color_wheel((hue + (i * 256 / LED_COUNT)) & 255);
+        led_strip_spi_set_pixel(&strip, i, color);
+    }
+
+    // Flush the buffer to update LEDs
+    esp_err_t ret = led_strip_spi_flush(&strip);
+    if (ret != ESP_OK) {
+        printf("Failed to flush LED buffer. Error: %d\n", ret);
+    }
+
+    // Increment hue for the next frame
+    hue++;
+
+    // Delay to control the animation speed
+    delay(10);
+    /* If button pressed */
+    if (!_data.hal->encoder.btn.read())
+    {
+        /* Hold until button release */
+        while (!_data.hal->encoder.btn.read())
+            delay(5);
+
+        /* Bye */
+        destroyApp();
+    }
 }
 
 
 void Xmas::onDestroy()
 {
+
     _log("onDestroy");
 
 }
