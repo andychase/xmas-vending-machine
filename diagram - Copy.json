@@ -38,7 +38,8 @@
       "left": 172.25,
       "rotate": 90,
       "attrs": { "value": "220" }
-    }
+    },
+    { "type": "wokwi-logic-analyzer", "id": "logic1", "top": 163.55, "left": -76.8, "attrs": {} }
   ],
   "connections": [
     [ "$serialMonitor:RX", "esp:G43", "", [] ],
