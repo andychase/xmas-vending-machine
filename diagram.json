@@ -6,7 +6,7 @@
     {
       "type": "board-m5stack-core-s3",
       "id": "esp",
-      "top": -294.43,
+      "top": -304.03,
       "left": -494.59,
       "attrs": { "flashSize": "16", "psramSize": "16", "psramType": "octal" }
     },
@@ -18,11 +18,8 @@
       "rotate": 180,
       "attrs": {}
     },
-    { "type": "chip-mcp23017", "id": "chip1", "top": -8.58, "left": 14.4, "attrs": {} },
     { "type": "wokwi-relay-module", "id": "relay1", "top": -124.6, "left": 19.2, "attrs": {} },
-    { "type": "wokwi-vcc", "id": "vcc1", "top": -172.04, "left": 153.6, "attrs": {} },
-    { "type": "wokwi-gnd", "id": "gnd1", "top": -48, "left": 172.2, "attrs": {} },
-    { "type": "wokwi-led", "id": "led1", "top": -147.6, "left": 167, "attrs": { "color": "red" } },
+    { "type": "wokwi-led", "id": "led1", "top": -3.6, "left": 167, "attrs": { "color": "red" } },
     {
       "type": "wokwi-apa102-matrix",
       "id": "strip1",
@@ -34,41 +31,38 @@
     {
       "type": "wokwi-resistor",
       "id": "r1",
-      "top": -81.6,
+      "top": 72,
       "left": 172.25,
       "rotate": 90,
       "attrs": { "value": "220" }
-    }
+    },
+    { "type": "chip-pcf8575", "id": "chip1", "top": -27.78, "left": 14.4, "attrs": {} }
   ],
   "connections": [
     [ "$serialMonitor:RX", "esp:G43", "", [] ],
     [ "$serialMonitor:TX", "esp:G44", "", [] ],
-    [ "esp:SCL", "encoder1:CLK", "green", [ "h105.6", "v-113.68" ] ],
     [ "encoder1:SW", "esp:G14", "green", [ "h0" ] ],
     [ "encoder1:CLK", "esp:G11", "green", [ "h0" ] ],
     [ "encoder1:DT", "esp:G12", "green", [ "h0" ] ],
-    [ "chip1:VSS", "esp:GND.4", "black", [ "h-134.4", "v-126.32" ] ],
-    [ "chip1:VDD", "esp:VCC.1", "red", [ "h-134.4", "v-107.12" ] ],
-    [ "chip1:SCK", "esp:SCL", "green", [ "h-134.4", "v-116.72" ] ],
-    [ "chip1:SDA", "esp:SCL", "green", [ "h-134.4", "v-126.32" ] ],
-    [ "chip1:SDA", "esp:SDA", "green", [ "h-134.4", "v-135.92" ] ],
     [ "encoder1:VCC", "esp:5V.1", "red", [ "h0" ] ],
     [ "encoder1:GND", "esp:GND.2", "black", [ "h0" ] ],
     [ "relay1:VCC", "esp:VCC.2", "red", [ "h-19.2", "v172.8", "h-283.24" ] ],
     [ "relay1:GND", "esp:GND.5", "black", [ "h-19.2", "v153.2", "h-273.64" ] ],
-    [ "esp:G13", "relay1:IN", "green", [ "v9.6", "h153.6" ] ],
     [ "strip1:VCC", "esp:VCC.3", "red", [ "v-9.6", "h-48", "v-55.94" ] ],
     [ "strip1:GND", "esp:GND.6", "black", [ "v-19.2", "h-28.95" ] ],
     [ "strip1:CI", "esp:G9.2", "green", [ "v-19.2", "h-9.6", "v-46.34" ] ],
     [ "strip1:DI", "esp:G8.2", "green", [ "v-28.8", "h-14.44" ] ],
-    [ "led1:C", "gnd1:GND", "green", [ "v0" ] ],
-    [ "led1:A", "r1:1", "green", [ "v0" ] ],
-    [ "gnd1:GND", "relay1:NC", "black", [ "v0" ] ],
-    [ "relay1:COM", "r1:2", "green", [ "h0" ] ],
-    [ "relay1:NO", "vcc1:VCC", "green", [ "h0" ] ],
-    [ "esp:GND.1", "logic1:GND", "black", [ "h28.8", "v451.2" ] ],
-    [ "strip1:CI", "logic1:D0", "green", [ "v0" ] ],
-    [ "strip1:DI", "logic1:D1", "green", [ "v0" ] ]
+    [ "led1:A", "r1:1", "black", [ "v0" ] ],
+    [ "led1:C", "relay1:COM", "yellow", [ "h-9.2", "v-133" ] ],
+    [ "r1:2", "chip1:GND", "black", [ "h0" ] ],
+    [ "relay1:NO", "relay1:VCC", "red", [ "v36.6", "h-142.8", "v-57.6" ] ],
+    [ "relay1:NC", "relay1:GND", "black", [ "h-56.4", "v-30", "h-96", "v38.8" ] ],
+    [ "relay1:IN", "chip1:P00", "green", [ "h0" ] ],
+    [ "chip1:SDA", "esp:SDA", "gold", [ "h-151.79", "v28.8", "h-96" ] ],
+    [ "chip1:SCL", "esp:SCL", "white", [ "h-142.19", "v28.8", "h-105.6" ] ],
+    [ "esp:SCL", "chip1:SCK", "white", [ "h-142.19", "v28.8", "h-105.6" ] ],
+    [ "chip1:VCC", "esp:VCC.1", "red", [ "h-209.39", "v27.28" ] ],
+    [ "chip1:GND", "esp:GND.4", "black", [ "h-163.2", "v-87.92" ] ]
   ],
   "dependencies": {}
 }

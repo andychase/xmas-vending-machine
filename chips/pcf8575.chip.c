@@ -1,14 +1,12 @@
 // Wokwi Custom Chip - For docs and examples see:
 // https://docs.wokwi.com/chips-api/getting-started
 //
-// SPDX-License-Identifier: MIT
-// Copyright 2023 
+// SPDX-License-Identifier: GPL
+// Copyright 2023 Pat Deegan, https://psychogenic.com
 
 #include "wokwi-api.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-
 
 #define I2C_BASE_ADDRESS 0x20
 #define NUM_GPIO  16
@@ -18,14 +16,16 @@
 #define PRINTF_INPUTVALUE(msg, val)   printf("%s 0x%x (p0 0x%x, p1 0x%x)", msg, val, (val & 0xff), ((val & 0xff00) >> 8))
 
 
+/* Chip state structure 
+   Everything we care about and need access to in callbacks.
+*/
 typedef struct {
   // address bit pins and device address
   uint8_t address;
   pin_t addressBits[NUM_ADDR_BITS];
 
   // interrupt and "bidir" i/o pins
-  pin_t nINTA;
-  pin_t nINTB;  
+  pin_t nINT;
   pin_t io[NUM_GPIO];
 
   // input configuration and read value
@@ -43,7 +43,9 @@ typedef struct {
   // io, so we can start/stop watching
   // depending on user settings writes
   pin_watch_config_t io_watch_config;
+
 } chip_state_t;
+
 
 
 /* Interrupt flag control 
@@ -52,14 +54,12 @@ typedef struct {
   Otherwise, it is floating.
 */
 void interruptFlagOff(chip_state_t* chip) {
-  // TODO: A and B
-  pin_mode(chip->nINTA, INPUT);
+  pin_mode(chip->nINT, INPUT);
 }
 
 void interruptFlagOn(chip_state_t* chip) {
-  // TODO: A and B
-  pin_mode(chip->nINTA, OUTPUT_LOW);
-  printf("INT A flag SET\n");
+  pin_mode(chip->nINT, OUTPUT_LOW);
+  printf("INT flag SET\n");
 }
 
 
@@ -163,7 +163,6 @@ bool on_i2c_write(void *user_data, uint8_t data) {
       pin_mode(targetPin, OUTPUT_LOW);
     }
 
-
   }
 
 
@@ -181,8 +180,11 @@ bool on_i2c_write(void *user_data, uint8_t data) {
 
 
 void on_i2c_disconnect(void *user_data) {
+
   // This method is optional. Useful if you need to know when the I2C transaction has concluded.
 }
+
+
 
 
 /*  I2C address management
@@ -206,10 +208,12 @@ uint8_t read_address(chip_state_t* chip) {
   return configuredAddress;
 }
 
+
 void chip_addr_change(void *user_data, pin_t pin, uint32_t value) {
   CHIPSTATE_FROM(user_data);
   chip->address = read_address(chip);
 }
+
 
 
 /* 
@@ -229,6 +233,7 @@ uint16_t readInputsValue(chip_state_t * chip) {
   }
   return inputsValue;
 }
+
 
 /*
   Anything that _may_ be treated as an output is watched and,
@@ -287,22 +292,28 @@ void initialize_state(chip_state_t * chip) {
   i2c->disconnect = on_i2c_disconnect;
 
   i2c->user_data = chip;
+
+
+
+
 }
 
+/*
+  Chip initialization, called on startup.
+*/
 void chip_init() {
   chip_state_t *chip = malloc(sizeof(chip_state_t));
-  
   const char * addrPinNames[] = {"A0", "A1", "A2"};
   const char * ioPinNames[] = {
-        "GPA0", "GPA1", "GPA2", "GPA3", "GPA4", "GPA5", "GPA6", "GPA7",
-        "GPB0", "GPB1", "GPB2", "GPB3", "GPB4", "GPB5", "GPB6", "GPB7"};
+        "P00", "P01", "P02", "P03", "P04", "P05", "P06", "P07",
+        "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17"};
 
 
   // basic state setup 
   initialize_state(chip);
 
-  chip->nINTA = pin_init("INTA", INPUT);
-  chip->nINTB = pin_init("INTB", INPUT);
+  chip->nINT = pin_init("nINT", INPUT);
+
 
   // address pins monitoring
   const pin_watch_config_t watch_addr_config = {
@@ -333,5 +344,6 @@ void chip_init() {
   interruptFlagOff(chip);
 
 
-  printf("Hello from custom chip!\n");
 }
+
+

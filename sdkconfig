@@ -2050,6 +2050,13 @@ CONFIG_WIFI_PROV_STA_ALL_CHANNEL_SCAN=y
 # end of Wi-Fi Provisioning Manager
 
 #
+# I2C
+#
+CONFIG_I2CDEV_TIMEOUT=1000
+CONFIG_I2CDEV_NOLOCK=y
+# end of I2C
+
+#
 # LVGL configuration
 #
 # CONFIG_LV_CONF_SKIP is not set
@@ -2352,6 +2359,13 @@ CONFIG_LV_USE_DEMO_STRESS=y
 # CONFIG_LV_USE_DEMO_MUSIC is not set
 # end of Demos
 # end of LVGL configuration
+
+#
+# MCP23x17
+#
+CONFIG_MCP23X17_IFACE_I2C=y
+# CONFIG_MCP23X17_IFACE_SPI is not set
+# end of MCP23x17
 # end of Component config
 
 # CONFIG_IDF_EXPERIMENTAL_FEATURES is not set
