@@ -1,0 +1,10 @@
+menu "GPIO Compatibility Layer Configuration"
+
+    config USING_SIMULATOR
+        bool "Use Simulator (i.e. PCF8575)"
+        default n
+        help
+            If enabled, the code uses the PCF8575 simulator. Otherwise, it uses the MCP23X17 device.
+    
+    endmenu
+    

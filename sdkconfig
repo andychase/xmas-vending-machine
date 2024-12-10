@@ -2366,6 +2366,12 @@ CONFIG_LV_USE_DEMO_STRESS=y
 CONFIG_MCP23X17_IFACE_I2C=y
 # CONFIG_MCP23X17_IFACE_SPI is not set
 # end of MCP23x17
+
+#
+# GPIO Compatibility Layer Configuration
+#
+# CONFIG_USING_SIMULATOR is not set
+# end of GPIO Compatibility Layer Configuration
 # end of Component config
 
 # CONFIG_IDF_EXPERIMENTAL_FEATURES is not set

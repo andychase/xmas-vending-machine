@@ -1,7 +1,6 @@
 #include "app_xmas.h"
 #include "../common_define.h"
-#include <pcf8575.h>
-#include "i2cdev.h"
+#include "gpio_compat.h"
 
 #define SDA_GPIO GPIO_NUM_1
 #define SCL_GPIO GPIO_NUM_2
@@ -39,56 +38,39 @@ void Xmas::onCreate() {
         return;
     }
 
-    // Define the PCF8575 device descriptor
-    i2c_dev_t pcf_device = {
-        .port = I2C_NUM_1,
-        .cfg = {
-            .mode = I2C_MODE_MASTER,            // I2C master mode
-            .sda_io_num = SDA_GPIO,            // GPIO for SDA
-            .scl_io_num = SCL_GPIO,            // GPIO for SCL
-            .sda_pullup_en = GPIO_PULLUP_ENABLE, // Enable SDA pull-up
-            .scl_pullup_en = GPIO_PULLUP_ENABLE, // Enable SCL pull-up
-            .master = {
-                .clk_speed = 400000,           // Set I2C clock frequency to 400 kHz
-            },
-            .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL // Use normal clock source
-        },
-        .addr = PCF8575_I2C_ADDR_BASE,        // Unshifted I2C address for PCF8575
-        .mutex = NULL,                        // Mutex will be initialized later
-        .timeout_ticks = 0                    // Default timeout; uses I2CDEV_MAX_STRETCH_TIME
-    };
+    // Define the GPIO compatibility device descriptor
+    compat_gpio_dev_t gpio_device;
 
-    ret = pcf8575_init_desc(&pcf_device, PCF8575_I2C_ADDR_BASE, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
+    ret = gpio_compat_init(&gpio_device, 0x20, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     if (ret != ESP_OK) {
-        printf("Failed to initialize PCF8575 descriptor: %s\n", esp_err_to_name(ret));
+        printf("Failed to initialize GPIO device descriptor: %s\n", esp_err_to_name(ret));
         return;
     }
 
     // Set all GPIOs to output initially (write all zeros)
-    ret = pcf8575_port_write(&pcf_device, 0x0000); // Set all pins low
+    ret = gpio_compat_write(&gpio_device, 0x0000); // Set all pins low
     if (ret != ESP_OK) {
-        printf("Failed to write to PCF8575 GPIOs: %s\n", esp_err_to_name(ret));
-        pcf8575_free_desc(&pcf_device); // Free the descriptor before exiting
+        printf("Failed to write to GPIOs: %s\n", esp_err_to_name(ret));
+        gpio_compat_free(&gpio_device); // Free the descriptor before exiting
         return;
     }
 
-    printf("PCF8575 device initialized and all pins set to LOW.\n");
+    printf("GPIO device initialized and all pins set to LOW.\n");
 
-    // Example: Set specific GPIO pin (P00)
-    uint16_t gpio_state = 0x0000; // Current GPIO state (all pins low)
-    ret = pcf8575_port_write(&pcf_device, gpio_state);
+    uint16_t gpio_state = 0x0000;
+    ret = gpio_compat_write(&gpio_device, gpio_state);
     if (ret != ESP_OK) {
         printf("Failed to set P00: %s\n", esp_err_to_name(ret));
-        pcf8575_free_desc(&pcf_device); // Free the descriptor before exiting
+        gpio_compat_free(&gpio_device); // Free the descriptor before exiting
         return;
     }
 
     printf("Successfully set P00 to HIGH.\n");
 
     // Clean up
-    ret = pcf8575_free_desc(&pcf_device);
+    ret = gpio_compat_free(&gpio_device);
     if (ret != ESP_OK) {
-        printf("Failed to free PCF8575 descriptor: %s\n", esp_err_to_name(ret));
+        printf("Failed to free GPIO device descriptor: %s\n", esp_err_to_name(ret));
     }
 
     // Deinitialize the I2C driver
@@ -97,7 +79,6 @@ void Xmas::onCreate() {
         printf("Failed to deinitialize I2C driver: %s\n", esp_err_to_name(ret));
     }
 }
-
 
 void Xmas::onRunning() {
     /* If button pressed */

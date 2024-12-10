@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2023
  *
  */
+#include "sdkconfig.h"
 #include "hal.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
@@ -24,10 +25,12 @@ namespace HAL
     {
         ESP_LOGI(TAG, "display init");
         display.init();
+        #ifdef CONFIG_USING_SIMULATOR
         display.setRotation(0);
         display.setBrightness(128);
         display.drawPixel(0, 0, 0xFFFF);
         display.drawGradientLine( 0, 80, 80, 0, 0xFF0000U, 0x0000FFU);
+        #endif
 
         /* Init tp right after lcd (sharing rst pin) */
         tp.init();
@@ -49,8 +52,13 @@ namespace HAL
 
         /* Create canvas */
         canvas = new LGFX_Sprite(&display);
+        #ifdef CONFIG_USING_SIMULATOR
         canvas->createSprite(240, display.height());
         canvas->setRotation(2);
+        #else
+        canvas->createSprite(display.width(), display.height());
+        #endif
+        
         // printf("free block: %d\n", heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
 
         /* Simple start up anim */
@@ -110,7 +118,7 @@ namespace HAL
 
         /* Set button pressed callback */
         // encoder.btn.setPressedCallback(_encoder_button_pressed_callback, this);
-        encoder.btn.setPin(14);
+        encoder.btn.setPin(HAL_PIN_PWR_WAKE_UP);
         encoder.btn.setPressedCallback(_encoder_button_pressed_callback, this);
     }
 
