@@ -76,7 +76,6 @@ void Xmas::onCreate() {
 
     // Example: Set specific GPIO pin (P00)
     uint16_t gpio_state = 0x0000; // Current GPIO state (all pins low)
-    gpio_state |= (1 << 0); // Set bit for P00 (LSB)
     ret = pcf8575_port_write(&pcf_device, gpio_state);
     if (ret != ESP_OK) {
         printf("Failed to set P00: %s\n", esp_err_to_name(ret));
