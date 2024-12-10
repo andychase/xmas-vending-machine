@@ -2,8 +2,8 @@
 #include "../common_define.h"
 #include "gpio_compat.h"
 
-#define SDA_GPIO GPIO_NUM_1
-#define SCL_GPIO GPIO_NUM_2
+#define SDA_GPIO GPIO_NUM_2
+#define SCL_GPIO GPIO_NUM_1
 
 using namespace MOONCAKE::USER_APP;
 
@@ -41,43 +41,42 @@ void Xmas::onCreate() {
     // Define the GPIO compatibility device descriptor
     compat_gpio_dev_t gpio_device;
 
-    ret = gpio_compat_init(&gpio_device, 0x20, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
+    ret = gpio_compat_init(&gpio_device, 0x21, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     if (ret != ESP_OK) {
         printf("Failed to initialize GPIO device descriptor: %s\n", esp_err_to_name(ret));
         return;
     }
 
-    // Set all GPIOs to output initially (write all zeros)
-    ret = gpio_compat_write(&gpio_device, 0x0000); // Set all pins low
-    if (ret != ESP_OK) {
-        printf("Failed to write to GPIOs: %s\n", esp_err_to_name(ret));
-        gpio_compat_free(&gpio_device); // Free the descriptor before exiting
-        return;
+    printf("GPIO device initialized. Starting to blink LED on A0...\n");
+
+    // Blink the LED on port A0 (bit 0)
+    bool led_on = false;
+    while (1) {
+        uint16_t gpio_state = led_on ? 0x0001 : 0x0000; // Set or clear bit 0
+        ret = gpio_compat_write(&gpio_device, gpio_state);
+        if (ret != ESP_OK) {
+            printf("Failed to toggle LED: %s\n", esp_err_to_name(ret));
+            break;
+        }
+
+        led_on = !led_on;
+        delay(500); // 500ms delay
     }
 
-    printf("GPIO device initialized and all pins set to LOW.\n");
+    // // Turn off LED after blinking
+    // gpio_compat_write(&gpio_device, 0x0000);
 
-    uint16_t gpio_state = 0x0000;
-    ret = gpio_compat_write(&gpio_device, gpio_state);
-    if (ret != ESP_OK) {
-        printf("Failed to set P00: %s\n", esp_err_to_name(ret));
-        gpio_compat_free(&gpio_device); // Free the descriptor before exiting
-        return;
-    }
+    // // Clean up
+    // ret = gpio_compat_free(&gpio_device);
+    // if (ret != ESP_OK) {
+    //     printf("Failed to free GPIO device descriptor: %s\n", esp_err_to_name(ret));
+    // }
 
-    printf("Successfully set P00 to HIGH.\n");
-
-    // Clean up
-    ret = gpio_compat_free(&gpio_device);
-    if (ret != ESP_OK) {
-        printf("Failed to free GPIO device descriptor: %s\n", esp_err_to_name(ret));
-    }
-
-    // Deinitialize the I2C driver
-    ret = i2cdev_done();
-    if (ret != ESP_OK) {
-        printf("Failed to deinitialize I2C driver: %s\n", esp_err_to_name(ret));
-    }
+    // // Deinitialize the I2C driver
+    // ret = i2cdev_done();
+    // if (ret != ESP_OK) {
+    //     printf("Failed to deinitialize I2C driver: %s\n", esp_err_to_name(ret));
+    // }
 }
 
 void Xmas::onRunning() {
