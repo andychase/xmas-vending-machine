@@ -25,7 +25,8 @@ namespace MOONCAKE
                 apa102_spi_device_t led_strip_device;
                 uint8_t hue = 0;
                 uint8_t currentSong = 0;
-                uint currentLED = 0;
+                uint currentSection = 0;
+                uint currentSectionAmountTransitioned = 0;
             public:
                 XMAS::Data_t _data;
 

@@ -4,8 +4,7 @@
 
 using namespace MOONCAKE::USER_APP;
 
-
-#define SPI_CLOCK_SPEED_HZ 5'000'000 // SPI Clock speed (1 MHz)
+#define SPI_CLOCK_SPEED_HZ 1000000 // SPI Clock speed (1 MHz)
 
 // APA102 device configuration
 #ifdef CONFIG_USING_SIMULATOR
@@ -15,10 +14,13 @@ using namespace MOONCAKE::USER_APP;
 #define DATA_PIN 8    // GPIO for data input (MOSI)
 #else
 #define XMAS_SPI_HOST SPI2_HOST
-#define LED_COUNT 576 // Number of LEDs in the strip
+#define LED_COUNT 72 // Number of LEDs in the strip
 #define CLOCK_PIN 1   // GPIO for clock input (CLK)
 #define DATA_PIN 2    // GPIO for data input (MOSI)
 #endif
+
+#define SECTIONS 4
+
 
 // Function to generate rainbow colors
 void color_wheel(uint8_t pos, uint8_t &red, uint8_t &green, uint8_t &blue) {
@@ -86,58 +88,59 @@ void Xmas::onCreate() {
     led_strip_device.clk = CLOCK_PIN;
     led_strip_device.cs = -1; // Not used for APA102
 
-    
     apa102_init(&led_strip_device, XMAS_SPI_HOST);
 
-    // // Set all LEDs to white initially
-    for (int i = 0; i < LED_COUNT; i++) {
-        apa102_set_pixel(i, 31, 255, 255, 255); // Brightness: 31, RGB: White
-    }
-    apa102_flush();
-
     printf("LEDs initialized and set to white successfully.\n");
+    currentSectionAmountTransitioned = 0;
+    currentSection = 0;
 }
 
 void Xmas::onRunning() {
-    LGFX_Sprite *canvas = _data.hal->canvas;
-    canvas->clear();
-    canvas->setTextSize(1.5);
-    canvas->setTextColor((uint32_t)0xF3E9D2);
-    canvas->setFont(&fonts::efontCN_24);
-    canvas->drawCenterString("XMAS", _data.hal->display.width() / 2, _data.hal->display.height() / 2 - 24);
-    canvas->pushSprite(0, 0);
-    canvas->setTextSize(1);
+    // Determine section size
+    int sectionSize = LED_COUNT / SECTIONS;
 
-    // // Set each LED to a color from the color wheel
+    // Check encoder movement to update the target section
+    if (_data.hal->encoder.wasMoved(true)) {
+        if (_data.hal->encoder.getDirection() < 1) {
+            currentSection = (currentSection + 1) % SECTIONS;
+        } else {
+            currentSection = (currentSection - 1 + SECTIONS) % SECTIONS;
+        }
+        currentSectionAmountTransitioned = 0; // Reset transition progress
+    }
+
+    // Smoothly transition between sections
+    if (currentSectionAmountTransitioned < sectionSize) {
+        currentSectionAmountTransitioned++;
+    }
+
+    // Calculate starting LED indices for the current and next sections
+    int currentStart = (currentSection * sectionSize) % LED_COUNT;
+    int nextStart = ((currentSection + 1) * sectionSize) % LED_COUNT;
+
+    // Clear all LEDs
     for (int i = 0; i < LED_COUNT; i++) {
-        uint8_t red, green, blue;
-        color_wheel((hue + (i * 256 / LED_COUNT)) & 255, red, green, blue);
-        apa102_set_pixel(i, 255, red, green, blue); // Brightness: 31
+        apa102_set_pixel(i, 0, 0, 0, 0); // Turn off
     }
 
-    if (_data.hal->encoder.wasMoved(true))
-    {
-        if (_data.hal->encoder.getDirection() < 1)
-            currentLED += 1;
-        else 
-            currentLED -= 1;
-        if (currentLED >= LED_COUNT)
-            currentLED = 0;
+    // Light up the current section with decreasing brightness
+    for (int i = 0; i < sectionSize; i++) {
+        int ledIndex = (currentStart + i) % LED_COUNT;
+        float blendFactor = 1.0f - (float)currentSectionAmountTransitioned / sectionSize;
+        apa102_set_pixel(ledIndex, 31 * blendFactor, 255 * blendFactor, 255 * blendFactor, 255 * blendFactor);
     }
 
-    for (int i = 0; i < LED_COUNT; i++) {
-        if (i != currentLED)
-            apa102_set_pixel(i, 0, 0, 0, 0);
+    // Light up the next section with increasing brightness
+    for (int i = 0; i < sectionSize; i++) {
+        int ledIndex = (nextStart + i) % LED_COUNT;
+        float blendFactor = (float)currentSectionAmountTransitioned / sectionSize;
+        apa102_set_pixel(ledIndex, 31 * blendFactor, 255 * blendFactor, 255 * blendFactor, 255 * blendFactor);
     }
 
-    // // Flush the buffer to update LEDs
+    // Flush the buffer to update LEDs
     apa102_flush();
 
-    // // Increment hue for the next frame
-    hue++;
-
-    // Nominal delay so that other tasks can run
-    // Also helps with SPI
+    // Delay to control the animation speed
     delay(1);
 
     /* If button pressed */

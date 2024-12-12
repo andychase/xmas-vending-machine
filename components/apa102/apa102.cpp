@@ -9,7 +9,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
-#define LEDS_COUNT 576
+#define LEDS_COUNT 72
 
 static const char *TAG = "APA102_DRIVER";
 
