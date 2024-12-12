@@ -9,7 +9,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
-#define LEDS_COUNT 15
+#define LEDS_COUNT 576
 
 static const char *TAG = "APA102_DRIVER";
 
@@ -39,7 +39,7 @@ static spi_transaction_t trans_buf = {
 
 static spi_device_handle_t spi;
 
-void apa102_init(apa102_spi_device_t *device) {
+void apa102_init(apa102_spi_device_t *device, spi_host_device_t host) {
     // SPI device configuration structs
     spi_bus_config_t buscfg = {
         .mosi_io_num = device->mosi,     // Master Out Slave In pin
@@ -72,11 +72,11 @@ void apa102_init(apa102_spi_device_t *device) {
     };
 
     esp_err_t ret;
-
-    ret = spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO);
+    
+    ret = spi_bus_initialize(host, &buscfg, SPI_DMA_CH_AUTO);
     ESP_ERROR_CHECK(ret);
 
-    ret = spi_bus_add_device(SPI3_HOST, &devcfg, &spi);
+    ret = spi_bus_add_device(host, &devcfg, &spi);
     ESP_ERROR_CHECK(ret);
 
     ESP_LOGI(TAG, "SPI Bus initialized!\n");

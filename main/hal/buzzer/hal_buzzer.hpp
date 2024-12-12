@@ -25,7 +25,7 @@ namespace BUZZER {
             inline void init(int8_t pin) { _pin = pin; }
 
             /* Wrap */
-            inline void tone(unsigned int frequency, unsigned long duration = 0) { ARDUINO::tone(_pin, frequency, duration); }
+            inline void tone(unsigned int frequency, unsigned long duration = 0, unsigned long pauseDuration = 0) { ARDUINO::tone(_pin, frequency, duration, pauseDuration); }
             inline void noTone() { ARDUINO::noTone(_pin); }
 
     };

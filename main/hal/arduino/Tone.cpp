@@ -20,6 +20,7 @@ typedef struct{
   uint8_t pin;
   unsigned int frequency;
   unsigned long duration;
+  unsigned long pauseDuration;
 } tone_msg_t;
 
 static void tone_task(void*){
@@ -42,6 +43,9 @@ static void tone_task(void*){
         if(tone_msg.duration){
           delay(tone_msg.duration);
           ledcWriteTone(tone_msg.pin, 0);
+        }
+        if (tone_msg.pauseDuration){
+          delay(tone_msg.pauseDuration);
         }
         break;
 
@@ -98,6 +102,7 @@ void noTone(uint8_t pin){
         .pin = pin,
         .frequency = 0, // Ignored
         .duration = 0, // Ignored
+        .pauseDuration = 0 // Ignored
       };
       xQueueSend(_tone_queue, &tone_msg, portMAX_DELAY);
     }
@@ -112,8 +117,8 @@ void noTone(uint8_t pin){
 // frequency - PWM frequency in Hz
 // duration - time in ms - how long will the signal be outputted.
 //   If not provided, or 0 you must manually call noTone to end output
-void tone(uint8_t pin, unsigned int frequency, unsigned long duration){
-  log_d("pin=%d, frequency=%u Hz, duration=%lu ms", pin, frequency, duration);
+void tone(uint8_t pin, unsigned int frequency, unsigned long duration, unsigned long pauseDuration = 0){
+  log_d("pin=%d, frequency=%u Hz, duration=%lu ms, pauseDuration=%lu ms", pin, frequency, duration, pauseDuration);
   if(_pin == -1 || _pin == pin) {
     if(tone_init()){
       tone_msg_t tone_msg = {
@@ -121,6 +126,7 @@ void tone(uint8_t pin, unsigned int frequency, unsigned long duration){
         .pin = pin,
         .frequency = frequency,
         .duration = duration,
+        .pauseDuration = pauseDuration
       };
       xQueueSend(_tone_queue, &tone_msg, portMAX_DELAY);
       return;
