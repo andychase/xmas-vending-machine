@@ -6,7 +6,6 @@ using namespace MOONCAKE::USER_APP;
 
 #define SPI_CLOCK_SPEED_HZ 1000000 // SPI Clock speed (1 MHz)
 
-// APA102 device configuration
 #ifdef CONFIG_USING_SIMULATOR
 #define XMAS_SPI_HOST SPI3_HOST
 #define LED_COUNT 576 // Number of LEDs in the strip
@@ -19,8 +18,7 @@ using namespace MOONCAKE::USER_APP;
 #define DATA_PIN 2    // GPIO for data input (MOSI)
 #endif
 
-#define SECTIONS 4
-
+#define SECTIONS 2
 
 // Function to generate rainbow colors
 void color_wheel(uint8_t pos, uint8_t &red, uint8_t &green, uint8_t &blue) {
@@ -46,14 +44,12 @@ void Xmas::playSong(int songId) {
     int duration;
     int pauseDuration;
     int tone;
-    for (int thisNote = 0; thisNote < sizeof(XMAS::songs[songId][0]) / sizeof(int); thisNote++)
-    {   
+    for (int thisNote = 0; thisNote < sizeof(XMAS::songs[songId][0]) / sizeof(int); thisNote++) {
         tone = XMAS::songs[songId][0][thisNote];
         duration = XMAS::songs[songId][1][thisNote] * XMAS::songConstants[songId][0] * 0.1;
         pauseDuration = (XMAS::songs[songId][1][thisNote] * XMAS::songConstants[songId][1] * 0.1) - duration;
-        // If duration is 0 the tone is played forever
         if (duration != 0) {
-            _data.hal->buzz.tone(tone, duration, pauseDuration);    
+            _data.hal->buzz.tone(tone, duration, pauseDuration);
         }
     }
     _data.hal->buzz.noTone();
@@ -63,7 +59,6 @@ void Xmas::onSetup() {
     setAppName("Xmas");
     setAllowBgRunning(false);
 
-    /* Copy default value */
     XMAS::Data_t default_data;
     _data = default_data;
 
@@ -82,80 +77,95 @@ void Xmas::onCreate() {
     canvas->pushSprite(0, 0);
     canvas->setTextSize(1);
 
-    // // Initialize the APA102 device
-    led_strip_device.clock_speed_hz = SPI_CLOCK_SPEED_HZ;
-    led_strip_device.mosi = DATA_PIN;
-    led_strip_device.clk = CLOCK_PIN;
-    led_strip_device.cs = -1; // Not used for APA102
+    // Initialize LED strip
+    esp_err_t ret;
 
-    apa102_init(&led_strip_device, XMAS_SPI_HOST);
+    // Step 1: Install the driver
+    ret = led_strip_spi_install();
+    if (ret != ESP_OK) {
+        printf("Failed to install SPI LED strip driver. Error: %d\n", ret);
+        return;
+    }
 
-    printf("LEDs initialized and set to white successfully.\n");
+    // Step 2: Create and initialize the strip descriptor
+    led_strip = LED_STRIP_SPI_DEFAULT_ESP32();
+    led_strip.length = LED_COUNT;  // Set the number of LEDs
+    led_strip.mosi_io_num = DATA_PIN;   // Set the Data pin (DI)
+    led_strip.sclk_io_num = CLOCK_PIN; // Set the Clock pin (CI)
+    led_strip.max_transfer_sz = LED_STRIP_SPI_BUFFER_SIZE(LED_COUNT);
+    led_strip.clock_speed_hz = SPI_CLOCK_SPEED_HZ;
+    led_strip.host_device = XMAS_SPI_HOST;
+
+    // Step 3: Initialize the LED strip
+    ret = led_strip_spi_init((led_strip_spi_t*)&led_strip);
+    if (ret != ESP_OK) {
+        printf("Failed to initialize SPI LED strip. Error: %d\n", ret);
+        return;
+    } else {
+        printf("LED strip initialized successfully.\n");
+    }
+
     currentSectionAmountTransitioned = 0;
     currentSection = 0;
 }
 
 void Xmas::onRunning() {
-    // Determine section size
     int sectionSize = LED_COUNT / SECTIONS;
 
-    // Check encoder movement to update the target section
     if (_data.hal->encoder.wasMoved(true)) {
         if (_data.hal->encoder.getDirection() < 1) {
             currentSection = (currentSection + 1) % SECTIONS;
         } else {
             currentSection = (currentSection - 1 + SECTIONS) % SECTIONS;
         }
-        currentSectionAmountTransitioned = 0; // Reset transition progress
+        currentSectionAmountTransitioned = 0;
     }
 
-    // Smoothly transition between sections
     if (currentSectionAmountTransitioned < sectionSize) {
         currentSectionAmountTransitioned++;
     }
 
-    // Calculate starting LED indices for the current and next sections
     int currentStart = (currentSection * sectionSize) % LED_COUNT;
     int nextStart = ((currentSection + 1) * sectionSize) % LED_COUNT;
 
-    // Clear all LEDs
     for (int i = 0; i < LED_COUNT; i++) {
-        apa102_set_pixel(i, 0, 0, 0, 0); // Turn off
+        led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
     }
 
-    // Light up the current section with decreasing brightness
     for (int i = 0; i < sectionSize; i++) {
         int ledIndex = (currentStart + i) % LED_COUNT;
         float blendFactor = 1.0f - (float)currentSectionAmountTransitioned / sectionSize;
-        apa102_set_pixel(ledIndex, 31 * blendFactor, 255 * blendFactor, 255 * blendFactor, 255 * blendFactor);
+        led_strip_spi_set_pixel(&led_strip, ledIndex, {
+            (uint8_t)(255 * blendFactor),
+            (uint8_t)(255 * blendFactor),
+            (uint8_t)(255 * blendFactor)
+        });
     }
 
-    // Light up the next section with increasing brightness
     for (int i = 0; i < sectionSize; i++) {
         int ledIndex = (nextStart + i) % LED_COUNT;
         float blendFactor = (float)currentSectionAmountTransitioned / sectionSize;
-        apa102_set_pixel(ledIndex, 31 * blendFactor, 255 * blendFactor, 255 * blendFactor, 255 * blendFactor);
+        led_strip_spi_set_pixel(&led_strip, ledIndex, {
+            (uint8_t)(255 * blendFactor),
+            (uint8_t)(255 * blendFactor),
+            (uint8_t)(255 * blendFactor)
+        });
     }
 
-    // Flush the buffer to update LEDs
-    apa102_flush();
+    led_strip_spi_flush(&led_strip);
 
-    // Delay to control the animation speed
     delay(1);
 
-    /* If button pressed */
     if (!_data.hal->encoder.btn.read()) {
-        /* Hold until button release */
         while (!_data.hal->encoder.btn.read())
             delay(5);
         playSong(currentSong++);
         if (currentSong >= 7)
             currentSong = 0;
-        /* Bye */
-        //destroyApp();
     }
 }
 
 void Xmas::onDestroy() {
     _log("onDestroy");
+    led_strip_spi_free(&led_strip);
 }

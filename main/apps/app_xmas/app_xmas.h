@@ -3,7 +3,7 @@
 #include "../app.h"
 #include "../../hal/hal.h"
 #include "songs/songs.h"
-#include <apa102.h>
+#include <led_strip_spi.h>
 #include "../../hal/arduino/Tone.h"
 
 namespace MOONCAKE
@@ -22,7 +22,7 @@ namespace MOONCAKE
         {
             private:
                 const char* _tag = "XMAS";
-                apa102_spi_device_t led_strip_device;
+                led_strip_spi_esp32_t led_strip;
                 uint8_t hue = 0;
                 uint8_t currentSong = 0;
                 uint currentSection = 0;
