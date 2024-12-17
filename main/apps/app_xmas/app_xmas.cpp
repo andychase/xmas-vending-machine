@@ -8,12 +8,12 @@ using namespace MOONCAKE::USER_APP;
 
 #ifdef CONFIG_USING_SIMULATOR
 #define XMAS_SPI_HOST SPI3_HOST
-#define LED_COUNT 576 // Number of LEDs in the strip
+#define LED_COUNT 15 // Number of LEDs in the strip
 #define CLOCK_PIN 9   // GPIO for clock input (CLK)
 #define DATA_PIN 8    // GPIO for data input (MOSI)
 #else
 #define XMAS_SPI_HOST SPI2_HOST
-#define LED_COUNT 72 // Number of LEDs in the strip
+#define LED_COUNT 576 // Number of LEDs in the strip
 #define CLOCK_PIN 1   // GPIO for clock input (CLK)
 #define DATA_PIN 2    // GPIO for data input (MOSI)
 #endif
@@ -31,7 +31,7 @@ void color_wheel(uint8_t pos, uint8_t &red, uint8_t &green, uint8_t &blue) {
         pos -= 85;
         red = 0;
         green = (uint8_t)(pos * 3);
-        blue = (uint8_t)(255 - pos * 3);
+    blue = (uint8_t)(255 - pos * 3);
     } else {
         pos -= 170;
         red = (uint8_t)(pos * 3);
@@ -105,62 +105,29 @@ void Xmas::onCreate() {
         printf("LED strip initialized successfully.\n");
     }
 
-    currentSectionAmountTransitioned = 0;
-    currentSection = 0;
+    startCount = _data.hal->encoder.getCount();
 }
 
 void Xmas::onRunning() {
     int sectionSize = LED_COUNT / SECTIONS;
 
     if (_data.hal->encoder.wasMoved(true)) {
-        if (_data.hal->encoder.getDirection() < 1) {
-            currentSection = (currentSection + 1) % SECTIONS;
-        } else {
-            currentSection = (currentSection - 1 + SECTIONS) % SECTIONS;
-        }
-        currentSectionAmountTransitioned = 0;
+            int brightness = std::max(0u, std::min(31u, ((uint) (_data.hal->encoder.getCount()) - startCount)));
+            led_strip_spi_fill_brightness(&led_strip, 0, LED_COUNT, {255, 255, 255}, brightness * 3);
+            
+            if (_data.hal->encoder.getCount() - startCount >= 31)
+                startCount = _data.hal->encoder.getCount() - 31;
+            if (_data.hal->encoder.getCount() - startCount <= 0)
+                startCount = _data.hal->encoder.getCount();
     }
-
-    if (currentSectionAmountTransitioned < sectionSize) {
-        currentSectionAmountTransitioned++;
-    }
-
-    int currentStart = (currentSection * sectionSize) % LED_COUNT;
-    int nextStart = ((currentSection + 1) * sectionSize) % LED_COUNT;
-
-    for (int i = 0; i < LED_COUNT; i++) {
-        led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
-    }
-
-    for (int i = 0; i < sectionSize; i++) {
-        int ledIndex = (currentStart + i) % LED_COUNT;
-        float blendFactor = 1.0f - (float)currentSectionAmountTransitioned / sectionSize;
-        led_strip_spi_set_pixel(&led_strip, ledIndex, {
-            (uint8_t)(255 * blendFactor),
-            (uint8_t)(255 * blendFactor),
-            (uint8_t)(255 * blendFactor)
-        });
-    }
-
-    for (int i = 0; i < sectionSize; i++) {
-        int ledIndex = (nextStart + i) % LED_COUNT;
-        float blendFactor = (float)currentSectionAmountTransitioned / sectionSize;
-        led_strip_spi_set_pixel(&led_strip, ledIndex, {
-            (uint8_t)(255 * blendFactor),
-            (uint8_t)(255 * blendFactor),
-            (uint8_t)(255 * blendFactor)
-        });
-    }
-
     led_strip_spi_flush(&led_strip);
-
     delay(1);
 
     if (!_data.hal->encoder.btn.read()) {
         while (!_data.hal->encoder.btn.read())
             delay(5);
         playSong(currentSong++);
-        if (currentSong >= 7)
+        if (currentSong >= 13)
             currentSong = 0;
     }
 }
