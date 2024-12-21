@@ -80,7 +80,7 @@ static const char *TAG = "mcp23x17";
 
 #ifdef CONFIG_MCP23X17_IFACE_I2C
 
-static esp_err_t read_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t *val)
+ esp_err_t read_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t *val)
 {
     CHECK_ARG(dev && val);
 
@@ -91,7 +91,7 @@ static esp_err_t read_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t *val)
     return ESP_OK;
 }
 
-static esp_err_t write_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t val)
+ esp_err_t write_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t val)
 {
     CHECK_ARG(dev);
 
@@ -102,7 +102,7 @@ static esp_err_t write_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t val)
     return ESP_OK;
 }
 
-static esp_err_t write_reg_bit_16(mcp23x17_t *dev, uint8_t reg, bool val, uint8_t bit)
+ esp_err_t write_reg_bit_16(mcp23x17_t *dev, uint8_t reg, bool val, uint8_t bit)
 {
     CHECK_ARG(dev);
 
@@ -117,7 +117,7 @@ static esp_err_t write_reg_bit_16(mcp23x17_t *dev, uint8_t reg, bool val, uint8_
     return ESP_OK;
 }
 
-static esp_err_t read_reg_bit_8(mcp23x17_t *dev, uint8_t reg, bool *val, uint8_t bit)
+ esp_err_t read_reg_bit_8(mcp23x17_t *dev, uint8_t reg, bool *val, uint8_t bit)
 {
     CHECK_ARG(dev && val);
 
@@ -132,7 +132,7 @@ static esp_err_t read_reg_bit_8(mcp23x17_t *dev, uint8_t reg, bool *val, uint8_t
     return ESP_OK;
 }
 
-static esp_err_t write_reg_bit_8(mcp23x17_t *dev, uint8_t reg, bool val, uint8_t bit)
+ esp_err_t write_reg_bit_8(mcp23x17_t *dev, uint8_t reg, bool val, uint8_t bit)
 {
     CHECK_ARG(dev);
 

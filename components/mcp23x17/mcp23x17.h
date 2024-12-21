@@ -48,6 +48,28 @@
 
 #define MCP23X17_ADDR_BASE 0x20
 
+#define MCP_REG_IODIRA   0x00
+#define MCP_REG_IODIRB   0x01
+#define MCP_REG_IPOLA    0x02
+#define MCP_REG_IPOLB    0x03
+#define MCP_REG_GPINTENA 0x04
+#define MCP_REG_GPINTENB 0x05
+#define MCP_REG_DEFVALA  0x06
+#define MCP_REG_DEFVALB  0x07
+#define MCP_REG_INTCONA  0x08
+#define MCP_REG_INTCONB  0x09
+#define MCP_REG_IOCON    0x0A
+#define MCP_REG_GPPUA    0x0C
+#define MCP_REG_GPPUB    0x0D
+#define MCP_REG_INTFA    0x0E
+#define MCP_REG_INTFB    0x0F
+#define MCP_REG_INTCAPA  0x10
+#define MCP_REG_INTCAPB  0x11
+#define MCP_REG_GPIOA    0x12
+#define MCP_REG_GPIOB    0x13
+#define MCP_REG_OLATA    0x14
+#define MCP_REG_OLATB    0x15
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -332,6 +354,15 @@ esp_err_t mcp23x17_port_set_interrupt(mcp23x17_t *dev, uint16_t mask, mcp23x17_g
  */
 esp_err_t mcp23x17_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr);
 
+esp_err_t read_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t *val);
+
+esp_err_t write_reg_16(mcp23x17_t *dev, uint8_t reg, uint16_t val);
+
+esp_err_t write_reg_bit_16(mcp23x17_t *dev, uint8_t reg, bool val, uint8_t bit);
+
+esp_err_t read_reg_bit_8(mcp23x17_t *dev, uint8_t reg, bool *val, uint8_t bit);
+
+esp_err_t write_reg_bit_8(mcp23x17_t *dev, uint8_t reg, bool val, uint8_t bit);
 
 #ifdef __cplusplus
 }
