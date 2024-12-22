@@ -50,27 +50,27 @@ void Xmas::onCreate() {
     }
 
 
-    mcp23x17_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
-    mcp23x17_set_pullup(&dev[0], MCP23017_PIN_BUTTON, true);
-    mcp23x17_set_interrupt(&dev[0], 9, MCP23X17_INT_LOW_EDGE); // Interrupt on high edge
+    gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
+    gpio_compat_set_pullup(&dev[0], MCP23017_PIN_BUTTON, true);
+    gpio_compat_set_interrupt(&dev[0], 9, MCP23X17_INT_LOW_EDGE); // Interrupt on high edge
     // For pin in ACTIVE_PINS (whereas ACTIVE_PIN[0] is 0x20), set each pin to output
     for (int i = 0; i < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); i++)
     {
         for (int j = 0; j < sizeof(ACTIVE_PINS[i]) / sizeof(ACTIVE_PINS[i][0]); j++)
         {
-            mcp23x17_set_mode(&dev[i], ACTIVE_PINS[i][j], MCP23X17_GPIO_OUTPUT);
+            gpio_compat_set_mode(&dev[i], ACTIVE_PINS[i][j], MCP23X17_GPIO_OUTPUT);
         }
     }
 }
 
 void Xmas::onRunning() {
     uint32_t val;
-    mcp23x17_get_level(&dev[0], MCP23017_PIN_BUTTON, &val);
+    gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &val);
     for (int i = 0; i < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); i++)
     {
         for (int j = 0; j < sizeof(ACTIVE_PINS[i]) / sizeof(ACTIVE_PINS[i][0]); j++)
         {
-            mcp23x17_set_level(&dev[i], ACTIVE_PINS[i][j], val);
+            gpio_compat_write(&dev[i], ACTIVE_PINS[i][j], val);
         }
     }
 

@@ -22,13 +22,38 @@ esp_err_t gpio_compat_free(compat_gpio_dev_t *dev) {
     return pcf8575_free_desc(dev);
 }
 
-esp_err_t gpio_compat_read(compat_gpio_dev_t *dev, uint16_t *val) {
-    return pcf8575_port_read(dev, val);
+esp_err_t gpio_compat_read(compat_gpio_dev_t *dev, uint8_t pin, uint32_t *val) {
+    uint32_t temp_val = 0;
+    esp_err_t err = pcf8575_port_read(dev, &temp_val);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    *val = (temp_val >> pin) & 0x1; // Extract the specific pin's value
+    return ESP_OK;
 }
 
-esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint16_t val) {
-    return pcf8575_port_write(dev, val);
+esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint8_t pin, uint32_t val) {
+    uint32_t temp_val = 0;
+    esp_err_t err = pcf8575_port_read(dev, &temp_val);
+    if (err != ESP_OK) {
+        return err;
+    }
+    if (val) {
+        temp_val |= (1 << pin);
+    } else {
+        temp_val &= ~(1 << pin);
+    }
+    return pcf8575_port_write(dev, temp_val);
 }
+
+void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {}
+
+
+void gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable) {}
+
+
+void gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr) {}
 
 #else
 // Using MCP23X17
@@ -51,14 +76,29 @@ esp_err_t gpio_compat_free(compat_gpio_dev_t *dev) {
     return mcp23x17_free_desc(dev);
 }
 
-esp_err_t gpio_compat_read(compat_gpio_dev_t *dev, uint16_t *val) {
-    return mcp23x17_port_read(dev, val);
+esp_err_t gpio_compat_read(compat_gpio_dev_t *dev,  uint8_t pin, uint32_t *val) {
+    return mcp23x17_get_level(dev, pin, val);
 }
 
-esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint16_t val) {
-    mcp23x17_set_mode(dev, 0, MCP23X17_GPIO_OUTPUT);
-    return mcp23x17_set_level(dev, 0, val);
+esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint8_t pin, uint32_t val) {
+    return mcp23x17_set_level(dev, pin, val);
 }
+
+void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {
+    mcp23x17_set_mode(dev, pin, mode);
+}
+
+
+void gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable) {
+    mcp23x17_set_pullup(dev, pin, enable);
+}
+
+
+void gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr) {
+    mcp23x17_set_interrupt(dev, pin, intr);
+}
+
+
 #endif
 
 void gpio_compat_i2cScan(i2c_port_t i2cPort, gpio_num_t sda_gpio, gpio_num_t scl_gpio) {
