@@ -1,64 +1,28 @@
 #include "app_xmas.h"
 #include "../common_define.h"
-#include "sdkconfig.h"
+#include "gpio_compat.h"
+#include <mcp23x17.h>
+#include <driver/i2c.h>
+
+
+#define SDA_GPIO GPIO_NUM_13
+#define SCL_GPIO GPIO_NUM_15
+
+#define MCP23017_PIN_LED     8    // GPIO pin connected to the LED
+#define MCP23017_PIN_BUTTON  9    // GPIO pin connected to the button
+
 
 using namespace MOONCAKE::USER_APP;
 
-#define SPI_CLOCK_SPEED_HZ 1000000 // SPI Clock speed (1 MHz)
-
-#ifdef CONFIG_USING_SIMULATOR
-#define XMAS_SPI_HOST SPI3_HOST
-#define LED_COUNT 15 // Number of LEDs in the strip
-#define CLOCK_PIN 9   // GPIO for clock input (CLK)
-#define DATA_PIN 8    // GPIO for data input (MOSI)
-#else
-#define XMAS_SPI_HOST SPI2_HOST
-#define LED_COUNT 576 // Number of LEDs in the strip
-#define CLOCK_PIN 1   // GPIO for clock input (CLK)
-#define DATA_PIN 2    // GPIO for data input (MOSI)
-#endif
-
-#define SECTIONS 2
-
-// Function to generate rainbow colors
-void color_wheel(uint8_t pos, uint8_t &red, uint8_t &green, uint8_t &blue) {
-    pos = 255 - pos;
-    if (pos < 85) {
-        red = (uint8_t)(255 - pos * 3);
-        green = 0;
-        blue = (uint8_t)(pos * 3);
-    } else if (pos < 170) {
-        pos -= 85;
-        red = 0;
-        green = (uint8_t)(pos * 3);
-    blue = (uint8_t)(255 - pos * 3);
-    } else {
-        pos -= 170;
-        red = (uint8_t)(pos * 3);
-        green = (uint8_t)(255 - pos * 3);
-        blue = 0;
-    }
-}
-
-void Xmas::playSong(int songId) {
-    int duration;
-    int pauseDuration;
-    int tone;
-    for (int thisNote = 0; thisNote < sizeof(XMAS::songs[songId][0]) / sizeof(int); thisNote++) {
-        tone = XMAS::songs[songId][0][thisNote];
-        duration = XMAS::songs[songId][1][thisNote] * XMAS::songConstants[songId][0] * 0.1;
-        pauseDuration = (XMAS::songs[songId][1][thisNote] * XMAS::songConstants[songId][1] * 0.1) - duration;
-        if (duration != 0) {
-            _data.hal->buzz.tone(tone, duration, pauseDuration);
-        }
-    }
-    _data.hal->buzz.noTone();
-}
+static esp_err_t ret;
+static mcp23x17_t dev[2];
+static const int ACTIVE_PINS[][8] = {{2,3,4,5, 6, 7, 14, 15}, {0, 1, 2, 3, 4, 5, 6, 7}};
 
 void Xmas::onSetup() {
     setAppName("Xmas");
     setAllowBgRunning(false);
 
+    /* Copy default value */
     XMAS::Data_t default_data;
     _data = default_data;
 
@@ -68,71 +32,57 @@ void Xmas::onSetup() {
 /* Life cycle */
 void Xmas::onCreate() {
     _log("onCreate");
-    LGFX_Sprite *canvas = _data.hal->canvas;
-    canvas->clear();
-    canvas->setTextSize(1.5);
-    canvas->setTextColor((uint32_t)0xF3E9D2);
-    canvas->setFont(&fonts::efontCN_24);
-    canvas->drawCenterString("XMAS", _data.hal->display.width() / 2, _data.hal->display.height() / 2 - 24);
-    canvas->pushSprite(0, 0);
-    canvas->setTextSize(1);
+    XMAS::Utils::drawCenterString(_data.hal, "XMAS");
 
-    // Initialize LED strip
-    esp_err_t ret;
+    gpio_compat_i2cScan(I2C_NUM_1, SDA_GPIO, SCL_GPIO);
 
-    // Step 1: Install the driver
-    ret = led_strip_spi_install();
-    if (ret != ESP_OK) {
-        printf("Failed to install SPI LED strip driver. Error: %d\n", ret);
+    ret = i2cdev_init();
+    if (ret != ESP_OK)
+    {
+        printf("Failed to initialize I2C driver: %s\n", esp_err_to_name(ret));
         return;
     }
 
-    // Step 2: Create and initialize the strip descriptor
-    led_strip = LED_STRIP_SPI_DEFAULT_ESP32();
-    led_strip.length = LED_COUNT;  // Set the number of LEDs
-    led_strip.mosi_io_num = DATA_PIN;   // Set the Data pin (DI)
-    led_strip.sclk_io_num = CLOCK_PIN; // Set the Clock pin (CI)
-    led_strip.max_transfer_sz = LED_STRIP_SPI_BUFFER_SIZE(LED_COUNT);
-    led_strip.clock_speed_hz = SPI_CLOCK_SPEED_HZ;
-    led_strip.host_device = XMAS_SPI_HOST;
-
-    // Step 3: Initialize the LED strip
-    ret = led_strip_spi_init((led_strip_spi_t*)&led_strip);
-    if (ret != ESP_OK) {
-        printf("Failed to initialize SPI LED strip. Error: %d\n", ret);
-        return;
-    } else {
-        printf("LED strip initialized successfully.\n");
+    for (int addr = 0x20; addr < 0x22; addr++)
+    {
+        compat_gpio_dev_t * _dev = &dev[addr - 0x20];
+        gpio_compat_init(_dev, addr, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     }
 
-    startCount = _data.hal->encoder.getCount();
+
+    mcp23x17_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
+    mcp23x17_set_pullup(&dev[0], MCP23017_PIN_BUTTON, true);
+    mcp23x17_set_interrupt(&dev[0], 9, MCP23X17_INT_LOW_EDGE); // Interrupt on high edge
+    // For pin in ACTIVE_PINS (whereas ACTIVE_PIN[0] is 0x20), set each pin to output
+    for (int i = 0; i < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); i++)
+    {
+        for (int j = 0; j < sizeof(ACTIVE_PINS[i]) / sizeof(ACTIVE_PINS[i][0]); j++)
+        {
+            mcp23x17_set_mode(&dev[i], ACTIVE_PINS[i][j], MCP23X17_GPIO_OUTPUT);
+        }
+    }
 }
 
 void Xmas::onRunning() {
-    int sectionSize = LED_COUNT / SECTIONS;
-
-    if (_data.hal->encoder.wasMoved(true)) {
-            int brightness = std::max(0u, std::min(31u, ((uint) (_data.hal->encoder.getCount()) - startCount)));
-            led_strip_spi_fill_brightness(&led_strip, 0, LED_COUNT, {255, 255, 255}, brightness * 3);
-            
-            if (_data.hal->encoder.getCount() - startCount >= 31)
-                startCount = _data.hal->encoder.getCount() - 31;
-            if (_data.hal->encoder.getCount() - startCount <= 0)
-                startCount = _data.hal->encoder.getCount();
+    uint32_t val;
+    mcp23x17_get_level(&dev[0], MCP23017_PIN_BUTTON, &val);
+    for (int i = 0; i < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); i++)
+    {
+        for (int j = 0; j < sizeof(ACTIVE_PINS[i]) / sizeof(ACTIVE_PINS[i][0]); j++)
+        {
+            mcp23x17_set_level(&dev[i], ACTIVE_PINS[i][j], val);
+        }
     }
-    led_strip_spi_flush(&led_strip);
-    delay(1);
+
+    delay(2000);
 
     if (!_data.hal->encoder.btn.read()) {
         while (!_data.hal->encoder.btn.read())
             delay(5);
-        playSong(currentSong++);
-        if (currentSong >= 13)
-            currentSong = 0;
+        destroyApp();
     }
 }
 
 void Xmas::onDestroy() {
     _log("onDestroy");
-    led_strip_spi_free(&led_strip);
 }

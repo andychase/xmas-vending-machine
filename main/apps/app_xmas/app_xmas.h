@@ -5,6 +5,7 @@
 #include "songs/songs.h"
 #include <led_strip_spi.h>
 #include "../../hal/arduino/Tone.h"
+#include "utils/xmas_utils.h"
 
 namespace MOONCAKE
 {

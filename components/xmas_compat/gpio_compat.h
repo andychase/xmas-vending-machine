@@ -55,6 +55,8 @@ esp_err_t gpio_compat_read(compat_gpio_dev_t *dev, uint16_t *val);
  */
 esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint16_t val);
 
+void gpio_compat_i2cScan(i2c_port_t i2cPort, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
+
 #ifdef __cplusplus
 }
 #endif
