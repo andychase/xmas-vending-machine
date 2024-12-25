@@ -25,7 +25,7 @@ namespace MOONCAKE
                 const char* _tag = "XMAS";
                 led_strip_spi_esp32_t led_strip;
                 uint8_t hue = 0;
-                uint8_t currentSong = 6;
+                uint8_t currentSong = 0;
                 uint startCount = 0;
                 uint currentSectionAmountTransitioned = 0;
                 uint currentSection = 0;

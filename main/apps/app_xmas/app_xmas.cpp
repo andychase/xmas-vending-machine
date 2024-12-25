@@ -81,6 +81,32 @@ rgb_t color_wheel(uint8_t pos, float gamma) {
     return apply_gamma2rgb(color, gamma);
 }
 
+struct LEDSectionStruct {
+    int startA;
+    int endA;
+    int startB;
+    int endB;
+};
+
+// Function to calculate StartA, EndA, StartB, and EndB
+LEDSectionStruct calculateSections(int section, int sectionSize) {
+    LEDSectionStruct result;
+    
+    // StartA Calculation
+    result.startA = (section % 4) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
+    
+    // EndA Calculation
+    result.endA = ((section % 4) + 1) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
+    
+    // StartB Calculation
+    result.startB = (sectionSize * 8) - ((section % 4 + 1) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
+    
+    // EndB Calculation
+    result.endB = (sectionSize * 8) - ((section % 4) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
+    
+    return result;
+}
+
 void Xmas::startLights() {
         // Step 1: Install the driver
     ret = led_strip_spi_install();
@@ -181,19 +207,19 @@ void Xmas::onRunning()
     // Flush the buffer to update LEDs
     
 
-    // bool buttonPushed = XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
-    // if (buttonPushed)
-    // {
-    //             playSong(currentSong++);
-    //     if (currentSong >= 13)
-    //         currentSong = 0;
-    //     PinSelection selectedPin = selectPin(_get_encoder_count() - 1);
-    //     gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
-    //     delay(250);
-    //     gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
-    //     delay(1000);
-    //     XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
-    // }
+    bool buttonPushed = XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
+    if (buttonPushed)
+    {
+        PinSelection selectedPin = selectPin(_get_encoder_count() - 1);
+        gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
+        delay(250);
+        gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
+        delay(1000);
+        playSong(currentSong++);
+        if (currentSong >= 13)
+            currentSong = 0;
+        XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
+    }
 
     // Lights
     uint oldSection = currentSection;
@@ -204,56 +230,24 @@ void Xmas::onRunning()
     currentSectionAmountTransitioned++;
     if (currentSectionAmountTransitioned < 500) {
           for (int i = 0; i < LED_COUNT; i++) {
-            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100}); // Turn off
+            led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
         }
+
+        LEDSectionStruct ledSectionStruct = calculateSections(currentSection, 18);
+
+        
+        for (size_t i = ledSectionStruct.startA; i < (ledSectionStruct.endA - ledSectionStruct.startA); i++) {
+            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
+        }
+
+                
+        for (size_t i = ledSectionStruct.startB; i < (ledSectionStruct.endB - ledSectionStruct.startB); i++) {
+            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
+        }
+
     }
 
-    // // Smoothly transition between sections
-    // if (currentSectionAmountTransitioned < SECTION_SIZE) {
-    //     currentSectionAmountTransitioned += TRANSITION_STEP;
-    // }
-    // if (currentSectionAmountTransitioned > SECTION_SIZE) {
-    //     currentSectionAmountTransitioned = SECTION_SIZE; // Clamp to SECTION_SIZE
-    // }
-
-    // // Calculate starting LED indices for the current and next sections
-    // int currentStart = (currentSection * SECTION_SIZE) % LED_COUNT;
-    // int nextStart = ((currentSection + 1) * SECTION_SIZE) % LED_COUNT;
-
-    // // Define mirrored section start indices
-    // int currentStartMirror = (currentStart + 72) % LED_COUNT;
-    // int nextStartMirror = (nextStart + 72) % LED_COUNT;
-
-    // // Clear all LEDs
-    // for (int i = 0; i < LED_COUNT; i++) {
-    //     led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0}); // Turn off
-    // }
-
-    // // Light up the current section with decreasing brightness
-    // for (int i = 0; i < SECTION_SIZE; i++) {
-    //     int ledIndex = (currentStart + i) % LED_COUNT;
-    //     int ledMirrorIndex = (currentStartMirror + i) % LED_COUNT;
-    //     float blendFactor = 1.0f - (float)currentSectionAmountTransitioned / SECTION_SIZE;
-    //     uint8_t brightness = static_cast<uint8_t>(255 * blendFactor);
-
-    //     // Light both primary and mirrored sections
-    //     led_strip_spi_set_pixel(&led_strip, ledIndex, {brightness, brightness, brightness});
-    //     led_strip_spi_set_pixel(&led_strip, ledMirrorIndex, {brightness, brightness, brightness});
-    // }
-
-    // // Light up the next section with increasing brightness
-    // for (int i = 0; i < SECTION_SIZE; i++) {
-    //     int ledIndex = (nextStart + i) % LED_COUNT;
-    //     int ledMirrorIndex = (nextStartMirror + i) % LED_COUNT;
-    //     float blendFactor = (float)currentSectionAmountTransitioned / SECTION_SIZE;
-    //     uint8_t brightness = static_cast<uint8_t>(255 * blendFactor);
-
-    //     // Light both primary and mirrored sections
-    //     led_strip_spi_set_pixel(&led_strip, ledIndex, {brightness, brightness, brightness});
-    //     led_strip_spi_set_pixel(&led_strip, ledMirrorIndex, {brightness, brightness, brightness});
-    // }
-
-    // Turn off LEDs in repeating pattern (0, 71, 72, 143, ...)
+    // Turn off edge LEDs so they don't overhead
     for (int base = 0; base < LED_COUNT; base += 144) {
         if (base < LED_COUNT) {
             led_strip_spi_set_pixel(&led_strip, base, {0, 0, 0}); // Turn off LED 0, 144, 288...

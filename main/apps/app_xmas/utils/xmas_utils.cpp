@@ -41,6 +41,7 @@ namespace MOONCAKE
                     if (ret != ESP_OK)
                     {
                         printf("Failed to read interrupt capture register: %s\n", esp_err_to_name(ret));
+                        return false;
                     }
 
                     // Clear level
