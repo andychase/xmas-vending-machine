@@ -68,7 +68,7 @@ esp_err_t gpio_compat_init(compat_gpio_dev_t *dev, uint8_t addr, i2c_port_t port
     dev->cfg.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
     dev->addr = addr;
     dev->mutex = NULL;
-    dev->timeout_ticks = pdMS_TO_TICKS(50);
+    dev->timeout_ticks = 0;
     return mcp23x17_init_desc(dev, dev->addr, dev->port, sda_gpio, scl_gpio);
 }
 

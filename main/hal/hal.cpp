@@ -56,6 +56,7 @@ namespace HAL
         canvas->createSprite(240, display.height());
         canvas->setRotation(2);
         #else
+        canvas->setRotation(2);
         canvas->createSprite(display.width(), display.height());
         #endif
         

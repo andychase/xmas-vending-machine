@@ -27,6 +27,8 @@ namespace MOONCAKE
                 uint8_t hue = 0;
                 uint8_t currentSong = 6;
                 uint startCount = 0;
+                uint currentSectionAmountTransitioned = 0;
+                uint currentSection = 0;
             public:
                 XMAS::Data_t _data;
 
@@ -36,6 +38,7 @@ namespace MOONCAKE
                  * @brief Lifecycle callbacks for derived to override
                  *
                  */
+                void startLights();
                 /* Setup App configs, called when App "install()" */
                 void onSetup();
 
