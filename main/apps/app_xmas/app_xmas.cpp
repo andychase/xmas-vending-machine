@@ -33,7 +33,7 @@ using namespace MOONCAKE::USER_APP;
 
 static esp_err_t ret;
 static mcp23x17_t dev[2];
-static const int ACTIVE_PINS[][8] = {{6, 4, 2, 3, 5, 15, 7, 14}, {6, 3, 0, 2, 7, 5, 4, 1}};
+static const int ACTIVE_PINS[][8] = {{6, 4, 2, 3, 5, 15, 7, 10}, {6, 3, 0, 2, 7, 5, 4, 1}};
 
 static const int ADDRESSES[] = {0, 1};
 
@@ -205,12 +205,12 @@ void Xmas::onRunning()
     hue++;
 
     // Flush the buffer to update LEDs
-    
 
     bool buttonPushed = XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
     if (buttonPushed)
-    {
+    { 
         PinSelection selectedPin = selectPin(_get_encoder_count() - 1);
+        _log("button pushed, address: %u, pin: %u", selectedPin.address, selectedPin.pin);
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
         delay(250);
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
@@ -233,15 +233,15 @@ void Xmas::onRunning()
             led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
         }
 
-        LEDSectionStruct ledSectionStruct = calculateSections(currentSection, 18);
+        LEDSectionStruct ledSectionStruct = calculateSections(currentSection-1, 18);
 
         
-        for (size_t i = ledSectionStruct.startA; i < (ledSectionStruct.endA - ledSectionStruct.startA); i++) {
+        for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++) {
             led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
         }
 
                 
-        for (size_t i = ledSectionStruct.startB; i < (ledSectionStruct.endB - ledSectionStruct.startB); i++) {
+        for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++) {
             led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
         }
 
