@@ -64,12 +64,13 @@ esp_err_t gpio_compat_init(compat_gpio_dev_t *dev, uint8_t addr, i2c_port_t port
     dev->cfg.scl_io_num = scl_gpio;
     dev->cfg.sda_pullup_en = GPIO_PULLUP_DISABLE;
     dev->cfg.scl_pullup_en = GPIO_PULLUP_DISABLE;
-    dev->cfg.master.clk_speed = 100000;
     dev->cfg.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
     dev->addr = addr;
     dev->mutex = NULL;
     dev->timeout_ticks = 0;
-    return mcp23x17_init_desc(dev, dev->addr, dev->port, sda_gpio, scl_gpio);
+    esp_err_t ret = mcp23x17_init_desc(dev, dev->addr, dev->port, sda_gpio, scl_gpio);
+    dev->cfg.master.clk_speed = 50000;
+    return ret;
 }
 
 esp_err_t gpio_compat_free(compat_gpio_dev_t *dev) {

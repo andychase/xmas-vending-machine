@@ -32,3 +32,4 @@ add_definitions(-DGUI_FONT_CN_SMALL=&fonts::efontCN_16_b)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(stamp_ring_factory_test)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
