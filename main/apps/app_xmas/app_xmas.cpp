@@ -44,12 +44,6 @@ struct PinSelection
     int pin;
 };
 
-void printBinary(uint16_t value) {
-    for (int i = 15; i >= 0; i--) {
-        printf("%c", (value & (1 << i)) ? '1' : '0');
-    }
-    printf("\n");
-}
 
 PinSelection selectPin(int index)
 {
@@ -85,7 +79,6 @@ rgb_t color_wheel(uint8_t pos, float gamma) {
         color.blue = 0;
     }
 
-    // Apply gamma correction to the final RGB values
     return apply_gamma2rgb(color, gamma);
 }
 
@@ -96,22 +89,13 @@ struct LEDSectionStruct {
     int endB;
 };
 
-// Function to calculate StartA, EndA, StartB, and EndB
+
 LEDSectionStruct calculateSections(int section, int sectionSize) {
     LEDSectionStruct result;
-    
-    // StartA Calculation
     result.startA = (section % 4) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
-    
-    // EndA Calculation
     result.endA = ((section % 4) + 1) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
-    
-    // StartB Calculation
     result.startB = (sectionSize * 8) - ((section % 4 + 1) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
-    
-    // EndB Calculation
     result.endB = (sectionSize * 8) - ((section % 4) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
-    
     return result;
 }
 
@@ -157,7 +141,6 @@ void Xmas::onCreate()
     XMAS::Utils::drawCenterString(_data.hal, "XMAS");
     gpio_compat_i2cScan(I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     
-
     ret = i2cdev_init();
     if (ret != ESP_OK)
     {
@@ -198,10 +181,7 @@ void Xmas::playSong(int songId) {
     _data.hal->buzz.noTone();
 }
 
-void Xmas::onRunning()
-{
-    
-    // Set each LED to a color from the color wheel
+void Xmas::onRunningLights() {
     for (int i = 0; i < LED_COUNT; i++) {
         rgb_t color = color_wheel((hue + (i * 256 / LED_COUNT)) & 255, 1);
         color.b *= 0.5;
@@ -211,8 +191,62 @@ void Xmas::onRunning()
     }
     hue++;
 
-    // Flush the buffer to update LEDs
+    uint oldSection = currentSection;
+    currentSection = _get_encoder_count();
+    if (oldSection != currentSection) {
+        currentSectionAmountTransitioned = 0;
+    }
+    currentSectionAmountTransitioned++;
+    if (currentSectionAmountTransitioned < 500) {
+          for (int i = 0; i < LED_COUNT; i++) {
+            led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
+        }
+        LEDSectionStruct ledSectionStruct = calculateSections(currentSection-1, 18);
+        for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++) {
+            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
+        }
+        for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++) {
+            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
+        }
+        // Narrow section a bit by blanking first and last few LEDs
+        for (int i = 0; i < 4; i++) {
+            if ((ledSectionStruct.startA + i) < LED_COUNT) {
+                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startA + i, {0, 0, 0});
+            }
+            if ((ledSectionStruct.endA - i) < LED_COUNT) {
+                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endA - i, {0, 0, 0});
+            }
+            if ((ledSectionStruct.startB + i) < LED_COUNT) {
+                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startB + i, {0, 0, 0});
+            }
+            if ((ledSectionStruct.endB - i) < LED_COUNT) {
+                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endB - i, {0, 0, 0});
+            }
+        }
+    }
 
+    // Turn off edge LEDs so they don't overhead
+    for (int base = 0; base < LED_COUNT; base += 144) {
+        if (base < LED_COUNT) {
+            led_strip_spi_set_pixel(&led_strip, base, {0, 0, 0});
+        }
+        if ((base + 71) < LED_COUNT) {
+            led_strip_spi_set_pixel(&led_strip, base + 71, {0, 0, 0});
+        }
+        if ((base + 72) < LED_COUNT) {
+            led_strip_spi_set_pixel(&led_strip, base + 72, {0, 0, 0});
+        }
+        if ((base + 143) < LED_COUNT) {
+            led_strip_spi_set_pixel(&led_strip, base + 143, {0, 0, 0});
+        }
+    }
+
+    led_strip_spi_flush(&led_strip);
+}
+
+void Xmas::onRunning()
+{
+    onRunningLights();
     uint32_t buttonState = 0;
     gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
     if (buttonState == 0)
@@ -229,53 +263,6 @@ void Xmas::onRunning()
         XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
     }
 
-    // Lights
-    uint oldSection = currentSection;
-    currentSection = _get_encoder_count();
-    if (oldSection != currentSection) {
-        currentSectionAmountTransitioned = 0;
-    }
-    currentSectionAmountTransitioned++;
-    if (currentSectionAmountTransitioned < 500) {
-          for (int i = 0; i < LED_COUNT; i++) {
-            led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
-        }
-
-        LEDSectionStruct ledSectionStruct = calculateSections(currentSection-1, 18);
-
-        
-        for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++) {
-            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
-        }
-
-                
-        for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++) {
-            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
-        }
-
-    }
-
-    // Turn off edge LEDs so they don't overhead
-    for (int base = 0; base < LED_COUNT; base += 144) {
-        if (base < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base, {0, 0, 0}); // Turn off LED 0, 144, 288...
-        }
-        if ((base + 71) < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base + 71, {0, 0, 0}); // Turn off LED 71, 215...
-        }
-        if ((base + 72) < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base + 72, {0, 0, 0}); // Turn off LED 72, 216...
-        }
-        if ((base + 143) < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base + 143, {0, 0, 0}); // Turn off LED 143, 287...
-        }
-    }
-
-    led_strip_spi_flush(&led_strip);
-
-
-    // Button
-
     if (!_data.hal->encoder.btn.read()) {
         while (!_data.hal->encoder.btn.read())
             delay(5);
@@ -284,8 +271,7 @@ void Xmas::onRunning()
             currentSong = 0;
     }
 
-    if (_data.hal->encoder.wasMoved(true))
-    {
+    if (_data.hal->encoder.wasMoved(true)){
         XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
     }
 
