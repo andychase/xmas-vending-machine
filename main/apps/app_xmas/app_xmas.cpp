@@ -37,6 +37,7 @@ using namespace MOONCAKE::USER_APP;
 static esp_err_t ret;
 static mcp23x17_t dev[4];
 static const int ACTIVE_PINS[][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
+static const int READ_PINS[][4] = {{3, 4, 5, 6}, {6, 5, 4, 3}, {6, 5, 4, 3}, {6, 5, 4, 3}};
 
 static const int ADDRESSES[] = {0, 1, 2, 3};
 
@@ -54,14 +55,14 @@ struct PinSelection
 };
 
 
-PinSelection selectPin(int index)
+PinSelection selectPin(int index, const int (*GROUP)[4] = ACTIVE_PINS)
 {
     for (int group = 0; group < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); group++)
     {
-        int groupSize = sizeof(ACTIVE_PINS[group]) / sizeof(ACTIVE_PINS[group][0]);
+        int groupSize = sizeof(GROUP[group]) / sizeof(GROUP[group][0]);
         if (index < groupSize)
         {
-            return {ADDRESSES[group], ACTIVE_PINS[group][index]};
+            return {ADDRESSES[group], GROUP[group][index]};
         }
         index -= groupSize;
     }
@@ -169,6 +170,14 @@ void Xmas::onCreate()
         for (int j = 0; j < sizeof(ACTIVE_PINS[i]) / sizeof(ACTIVE_PINS[i][0]); j++)
         {
             gpio_compat_set_mode(&dev[i], ACTIVE_PINS[i][j], MCP23X17_GPIO_OUTPUT);
+        }
+    }
+    for (int i = 0; i < sizeof(READ_PINS) / sizeof(READ_PINS[0]); i++)
+    {
+        for (int j = 0; j < sizeof(READ_PINS[i]) / sizeof(READ_PINS[i][0]); j++)
+        {
+            gpio_compat_set_mode(&dev[i], READ_PINS[i][j], MCP23X17_GPIO_INPUT);
+            gpio_compat_set_pullup(&dev[i], READ_PINS[i][j], true);
         }
     }
 
@@ -306,7 +315,15 @@ void Xmas::onRunningButtons() {
     }
 
     if (_data.hal->encoder.wasMoved(true)){
-        XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
+        PinSelection selectedPin = selectPin(_get_encoder_count() - 1, READ_PINS);
+        uint32_t val = 0;
+        gpio_compat_read(&dev[selectedPin.address], selectedPin.pin, &val);
+        if (!val) {
+            XMAS::Utils::drawCenterString(_data.hal, (std::to_string((_get_encoder_count())) + "*").c_str());
+        } else {
+            XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
+        }
+        
     }
 }
 
