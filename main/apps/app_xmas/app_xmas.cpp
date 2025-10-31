@@ -5,6 +5,8 @@
 #include <mcp23x17.h>
 #include <driver/i2c.h>
 
+#include "utils/xmas_img.h"
+
 #define _get_encoder_count() ((((_data.hal->encoder.getCount() / 2) % 16) + 16) % 16 + 1)
 
 #define SDA_GPIO GPIO_NUM_13
@@ -37,6 +39,13 @@ static mcp23x17_t dev[4];
 static const int ACTIVE_PINS[][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
 
 static const int ADDRESSES[] = {0, 1, 2, 3};
+
+
+static bool s_showLeftFrame = true;
+static int s_frameToggleCounter = 0;
+#define XMAS_IMG_W 216
+#define XMAS_IMG_H 93
+#define XMAS_HALF_W (XMAS_IMG_W / 2)
 
 struct PinSelection
 {
@@ -181,6 +190,32 @@ void Xmas::playSong(int songId) {
     _data.hal->buzz.noTone();
 }
 
+void Xmas::showAnimation() {
+    for (int frames = 30; frames > 0; frames--) {
+        LGFX_Sprite* canvas = _data.hal->canvas;
+        s_frameToggleCounter++;
+        if (s_frameToggleCounter >= 2) {
+            s_showLeftFrame = !s_showLeftFrame;
+            s_frameToggleCounter = 0;
+        }
+        int offX = s_showLeftFrame ? 0 : XMAS_HALF_W;
+        canvas->clear();
+        canvas->fillScreen(0xFFFFFF);
+        canvas->drawQoi(
+            (const uint8_t*)XMASPIMAGE1, 
+            sizeof(XMASPIMAGE1), 
+            (_data.hal->display.width() / 2) - (XMAS_HALF_W/2), \
+            (_data.hal->display.height() / 2) - (XMAS_IMG_H/2), 
+            XMAS_HALF_W, 
+            XMAS_IMG_H, 
+            offX, 
+            0
+        );
+        canvas->pushSprite(0, 0);
+        delay(100);
+    }
+}
+
 void Xmas::onRunningLights() {
     for (int i = 0; i < LED_COUNT; i++) {
         rgb_t color = color_wheel((hue + (i * 256 / LED_COUNT)) & 255, 1);
@@ -244,9 +279,7 @@ void Xmas::onRunningLights() {
     led_strip_spi_flush(&led_strip);
 }
 
-void Xmas::onRunning()
-{
-    onRunningLights();
+void Xmas::onRunningButtons() {
     uint32_t buttonState = 0;
     gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
     if (buttonState == 0)
@@ -256,7 +289,8 @@ void Xmas::onRunning()
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
         delay(250);
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
-        delay(1000);
+        showAnimation();
+        XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
         // playSong(currentSong++);
         // if (currentSong >= 13)
         //     currentSong = 0;
@@ -274,7 +308,12 @@ void Xmas::onRunning()
     if (_data.hal->encoder.wasMoved(true)){
         XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
     }
+}
 
+void Xmas::onRunning()
+{
+    onRunningLights();
+    onRunningButtons();
     delay(1);
 }
 

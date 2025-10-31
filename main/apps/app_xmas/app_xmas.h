@@ -33,6 +33,8 @@ namespace MOONCAKE
 
                 void playSong(int songId);
 
+                void showAnimation();
+
                 /**
                  * @brief Lifecycle callbacks for derived to override
                  *
@@ -45,6 +47,7 @@ namespace MOONCAKE
                 void onCreate();
                 void onRunning();
                 void onRunningLights();
+                void onRunningButtons();
                 void onDestroy();
         };
     }
