@@ -13,7 +13,7 @@
 #define MCP23017_PIN_LED 8    // GPIO pin connected to the LED
 #define MCP23017_PIN_BUTTON 0 // GPIO pin connected to the button
 
-#define SPI_CLOCK_SPEED_HZ 100'000
+#define SPI_CLOCK_SPEED_HZ 200'000
 #ifdef CONFIG_USING_SIMULATOR
 #define XMAS_SPI_HOST SPI3_HOST
 #define LED_COUNT 15 // Number of LEDs in the strip
@@ -33,10 +33,10 @@
 using namespace MOONCAKE::USER_APP;
 
 static esp_err_t ret;
-static mcp23x17_t dev[2];
-static const int ACTIVE_PINS[][4] = {{8, 9, 10, 11}};
+static mcp23x17_t dev[4];
+static const int ACTIVE_PINS[][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
 
-static const int ADDRESSES[] = {0};
+static const int ADDRESSES[] = {0, 1, 2, 3};
 
 struct PinSelection
 {
@@ -53,7 +53,7 @@ void printBinary(uint16_t value) {
 
 PinSelection selectPin(int index)
 {
-    for (int group = 0; group < 1; group++)
+    for (int group = 0; group < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); group++)
     {
         int groupSize = sizeof(ACTIVE_PINS[group]) / sizeof(ACTIVE_PINS[group][0]);
         if (index < groupSize)
@@ -164,11 +164,11 @@ void Xmas::onCreate()
         printf("Failed to initialize I2C driver: %s\n", esp_err_to_name(ret));
     }
 
-    //for (int addr = 0x20; addr < 0x21; addr++)
-    //{
-        compat_gpio_dev_t* _dev = &dev[0];
-        gpio_compat_init(_dev, 0x21, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
-    //}
+    for (int addr = 0x21; addr <= 0x24; addr++)
+    {
+        compat_gpio_dev_t* _dev = &dev[addr - 0x21];
+        gpio_compat_init(_dev, addr, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
+    }
 
     gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
     gpio_compat_set_interrupt(&dev[0], 0, MCP23X17_INT_LOW_EDGE);
@@ -213,7 +213,6 @@ void Xmas::onRunning()
 
     // Flush the buffer to update LEDs
 
-    bool buttonPushed = XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
     uint32_t buttonState = 0;
     gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
     if (buttonState == 0)
@@ -272,7 +271,7 @@ void Xmas::onRunning()
         }
     }
 
-    esp_err_t ret = led_strip_spi_flush(&led_strip);
+    led_strip_spi_flush(&led_strip);
 
 
     // Button
@@ -290,7 +289,7 @@ void Xmas::onRunning()
         XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
     }
 
-    delay(20);
+    delay(1);
 }
 
 void Xmas::onDestroy() { _log("onDestroy"); }
