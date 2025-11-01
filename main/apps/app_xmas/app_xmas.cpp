@@ -14,7 +14,7 @@
 #define MCP23017_PIN_LED 8    // GPIO pin connected to the LED
 #define MCP23017_PIN_BUTTON 0 // GPIO pin connected to the button
 
-#define SPI_CLOCK_SPEED_HZ 100'000
+#define SPI_CLOCK_SPEED_HZ 300'000
 #ifdef CONFIG_USING_SIMULATOR
 #define XMAS_SPI_HOST SPI3_HOST
 #define LED_COUNT 15 // Number of LEDs in the strip
@@ -41,9 +41,6 @@ static const int READ_PINS[][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3,
 static const int ADDRESSES[] = {0, 1, 2, 3};
 
 static TickType_t lastFlushTick = 0;
-const TickType_t flushIntervalMs = 33; // ~30 FPS for LEDs
-
-static TickType_t lastFlushTickD = 0;
 
 static bool s_showLeftFrame = true;
 static int s_frameToggleCounter = 0;
@@ -166,15 +163,15 @@ void Xmas::onCreate()
         gpio_compat_init(_dev, addr, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     }
 
-    gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
-    gpio_compat_set_interrupt(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_INT_LOW_EDGE);
-    
     // Make sure other control units have their 0 pin off
     for (int i = 0; i < sizeof(dev) / sizeof(dev[0]); i++)
     {
             gpio_compat_set_mode(&dev[i], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
             gpio_compat_set_pullup(&dev[i], MCP23017_PIN_BUTTON, true);
     }
+
+    gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
+    gpio_compat_set_interrupt(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_INT_LOW_EDGE);
     for (int i = 0; i < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); i++)
     {
         for (int j = 0; j < sizeof(ACTIVE_PINS[i]) / sizeof(ACTIVE_PINS[i][0]); j++)
@@ -290,24 +287,19 @@ void Xmas::onRunningLights() {
         }
     }
 
-    // Throttle SPI flush to ~30Hz (adjust ms as needed). Flushing every frame
-    // is expensive; we only need to push updates at a lower rate.
+    // Throttle SPI flush to 10Hz (adjust ms as needed). Flushing every frame
     TickType_t nowMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    if ((nowMs - lastFlushTick) >= flushIntervalMs) {
-        led_strip_spi_flush(&led_strip);
+    if ((nowMs - lastFlushTick) >= 100) {
+    led_strip_spi_flush(&led_strip);
         lastFlushTick = nowMs;
     }
 }
 
 void Xmas::onRunningButtons() {
     uint32_t buttonState = 0;
-    TickType_t nowMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    if ((nowMs - lastFlushTick) >= 3) {
-        gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
-        lastFlushTickD = nowMs;
-    }
+    ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
     
-    if (buttonState == 0)
+    if (ret == ESP_OK && buttonState == 0)
     { 
         PinSelection selectedPin = selectPin(currentSelection - 1);
         _log("button pushed, address: %u, pin: %u", selectedPin.address, selectedPin.pin);
