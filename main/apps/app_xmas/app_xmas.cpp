@@ -7,7 +7,6 @@
 
 #include "utils/xmas_img.h"
 
-#define _get_encoder_count() ((((_data.hal->encoder.getCount() / 2) % 16) + 16) % 16 + 1)
 
 #define SDA_GPIO GPIO_NUM_13
 #define SCL_GPIO GPIO_NUM_15
@@ -37,7 +36,7 @@ using namespace MOONCAKE::USER_APP;
 static esp_err_t ret;
 static mcp23x17_t dev[4];
 static const int ACTIVE_PINS[][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
-static const int READ_PINS[][4] = {{3, 4, 5, 6}, {6, 5, 4, 3}, {6, 5, 4, 3}, {6, 5, 4, 3}};
+static const int READ_PINS[][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
 
 static const int ADDRESSES[] = {0, 1, 2, 3};
 
@@ -164,7 +163,7 @@ void Xmas::onCreate()
     }
 
     gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
-    gpio_compat_set_interrupt(&dev[0], 0, MCP23X17_INT_LOW_EDGE);
+    gpio_compat_set_interrupt(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_INT_LOW_EDGE);
     for (int i = 0; i < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); i++)
     {
         for (int j = 0; j < sizeof(ACTIVE_PINS[i]) / sizeof(ACTIVE_PINS[i][0]); j++)
@@ -235,17 +234,12 @@ void Xmas::onRunningLights() {
     }
     hue++;
 
-    uint oldSection = currentSection;
-    currentSection = _get_encoder_count();
-    if (oldSection != currentSection) {
-        currentSectionAmountTransitioned = 0;
-    }
-    currentSectionAmountTransitioned++;
-    if (currentSectionAmountTransitioned < 500) {
+    rainbowTimeCounter++;
+    if (rainbowTimeCounter < 500) {
           for (int i = 0; i < LED_COUNT; i++) {
             led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
         }
-        LEDSectionStruct ledSectionStruct = calculateSections(currentSection-1, 18);
+        LEDSectionStruct ledSectionStruct = calculateSections(currentSelection-1, 18);
         for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++) {
             led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
         }
@@ -293,13 +287,13 @@ void Xmas::onRunningButtons() {
     gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
     if (buttonState == 0)
     { 
-        PinSelection selectedPin = selectPin(_get_encoder_count() - 1);
+        PinSelection selectedPin = selectPin(currentSelection - 1);
         _log("button pushed, address: %u, pin: %u", selectedPin.address, selectedPin.pin);
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
         delay(250);
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
         showAnimation();
-        XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
+        XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         // playSong(currentSong++);
         // if (currentSong >= 13)
         //     currentSong = 0;
@@ -315,15 +309,19 @@ void Xmas::onRunningButtons() {
     }
 
     if (_data.hal->encoder.wasMoved(true)){
-        PinSelection selectedPin = selectPin(_get_encoder_count() - 1, READ_PINS);
+        uint oldSection = currentSelection;
+        currentSelection = ((((_data.hal->encoder.getCount() / 2) % 16) + 16) % 16 + 1);
+        if (oldSection != currentSelection) {
+            rainbowTimeCounter = 0;
+        }
+        PinSelection selectedPin = selectPin(currentSelection - 1, READ_PINS);
         uint32_t val = 0;
         gpio_compat_read(&dev[selectedPin.address], selectedPin.pin, &val);
-        if (!val) {
-            XMAS::Utils::drawCenterString(_data.hal, (std::to_string((_get_encoder_count())) + "*").c_str());
+        if (val) {
+            XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         } else {
-            XMAS::Utils::drawCenterString(_data.hal, std::to_string((_get_encoder_count())).c_str());
+            XMAS::Utils::drawCenterString(_data.hal, (std::to_string(currentSelection) + "*").c_str());
         }
-        
     }
 }
 

@@ -26,8 +26,8 @@ namespace MOONCAKE
                 uint8_t hue = 0;
                 uint8_t currentSong = 0;
                 unsigned int startCount = 0;
-                unsigned int currentSectionAmountTransitioned = 0;
-                unsigned int currentSection = 0;
+                unsigned int rainbowTimeCounter = 0;
+                unsigned int currentSelection = 0;
             public:
                 XMAS::Data_t _data;
 
