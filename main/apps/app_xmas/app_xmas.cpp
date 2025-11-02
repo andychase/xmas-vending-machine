@@ -42,11 +42,6 @@ static const int ADDRESSES[] = {0, 1, 2, 3};
 
 static TickType_t lastFlushTick = 0;
 
-static bool s_showLeftFrame = true;
-static int s_frameToggleCounter = 0;
-#define XMAS_IMG_W 216
-#define XMAS_IMG_H 93
-#define XMAS_HALF_W (XMAS_IMG_W / 2)
 
 struct PinSelection
 {
@@ -206,31 +201,6 @@ void Xmas::playSong(int songId) {
     _data.hal->buzz.noTone();
 }
 
-void Xmas::showAnimation() {
-    for (int frames = 30; frames > 0; frames--) {
-        LGFX_Sprite* canvas = _data.hal->canvas;
-        s_frameToggleCounter++;
-        if (s_frameToggleCounter >= 2) {
-            s_showLeftFrame = !s_showLeftFrame;
-            s_frameToggleCounter = 0;
-        }
-        int offX = s_showLeftFrame ? 0 : XMAS_HALF_W;
-        canvas->clear();
-        canvas->fillScreen(0xFFFFFF);
-        canvas->drawQoi(
-            (const uint8_t*)XMASPIMAGE1, 
-            sizeof(XMASPIMAGE1), 
-            (_data.hal->display.width() / 2) - (XMAS_HALF_W/2), \
-            (_data.hal->display.height() / 2) - (XMAS_IMG_H/2), 
-            XMAS_HALF_W, 
-            XMAS_IMG_H, 
-            offX, 
-            0
-        );
-        canvas->pushSprite(0, 0);
-        delay(100);
-    }
-}
 
 void Xmas::onRunningLights() {
     for (int i = 0; i < LED_COUNT; i++) {
@@ -306,7 +276,14 @@ void Xmas::onRunningButtons() {
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
         delay(250);
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
-        showAnimation();
+        XMAS::Utils::showAnimation(
+            &XMASPIMAGE1, 
+            _data.hal->canvas,
+            (_data.hal->display.width() / 2) - (XMASPIMAGE1.width/2), \
+            (_data.hal->display.height() / 2) - (XMASPIMAGE1.height/2), 
+            5,
+            3000
+        );
         XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         // playSong(currentSong++);
         // if (currentSong >= 13)

@@ -33,8 +33,6 @@ namespace MOONCAKE
 
                 void playSong(int songId);
 
-                void showAnimation();
-
                 /**
                  * @brief Lifecycle callbacks for derived to override
                  *
