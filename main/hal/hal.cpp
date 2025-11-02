@@ -63,23 +63,23 @@ namespace HAL
         // printf("free block: %d\n", heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
 
         /* Simple start up anim */
-        display.setBrightness(0);
-        delay(100);
+        //display.setBrightness(0);
+        // delay(100);
 
-        canvas->setTextSize(1.5);
-        canvas->setTextColor((uint32_t)0xF3E9D2);
-        canvas->setFont(&fonts::efontCN_24);
-        canvas->drawCenterString("M5-DIAL", display.width() / 2, display.height() / 2 - 24);
-        canvas->pushSprite(0, 0);
-        canvas->setTextSize(1);
-        for (int i = 0; i < 128; i++)
-        {
-            display.setBrightness(i);
-            delay(4);
-        }
-        delay(200);
+        // canvas->setTextSize(1.5);
+        // canvas->setTextColor((uint32_t)0xF3E9D2);
+        // canvas->setFont(&fonts::efontCN_24);
+        // canvas->drawCenterString("M5-DIAL", display.width() / 2, display.height() / 2 - 24);
+        // canvas->pushSprite(0, 0);
+        // canvas->setTextSize(1);
+        // for (int i = 0; i < 128; i++)
+        // {
+        //     display.setBrightness(i);
+        //     //delay(4);
+        // }
+        //delay(200);
 
-        // display.setBrightness(128);
+        display.setBrightness(128);
     }
 
     static int _last_count = 0;
