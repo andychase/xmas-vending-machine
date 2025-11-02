@@ -89,13 +89,13 @@ namespace HAL
         if (new_shit < _last_count)
         {
             // printf("???\n");
-            ((HAL*)userData)->buzz.tone(7000, 20);
+            ((HAL*)userData)->buzz.tone(500, 10);
             _last_count = new_shit;
         }
         else
         {
             // printf("666\n");
-            ((HAL*)userData)->buzz.tone(6000, 20);
+            ((HAL*)userData)->buzz.tone(400, 10);
             _last_count = new_shit;
         }
     }
