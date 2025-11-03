@@ -459,6 +459,8 @@ namespace lgfx
     extern const lgfx::U8g2font efontTW_24_b ;
     extern const lgfx::U8g2font efontTW_24_bi;
     extern const lgfx::U8g2font efontTW_24_i ;
+    extern const lgfx::U8g2font efontBubblyBold16;
+    extern const lgfx::U8g2font efontTomorrowNight10;
   }
 
   struct FontMetrics

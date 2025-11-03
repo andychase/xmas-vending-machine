@@ -1175,6 +1175,9 @@ label_nextbyte: /// 次のデータを取得する;
     #include "../Fonts/Ascii24x48.h"
     #include "../Fonts/Ascii8x16.h"
 
+    #include "../Fonts/efont/bubbly.h"
+    #include "../Fonts/efont/tomorrown.h"
+
     static constexpr uint8_t font0_info[]         = {  0, 255, 5 }; // start code, end code, width
     static constexpr uint8_t font8x8c64_info[]    = { 32, 143, 8 }; // start code, end code, width
     static constexpr uint8_t fontlib24x48_info[]  = { 32, 126, 0 }; // start code, end code
@@ -1309,6 +1312,11 @@ label_nextbyte: /// 次のデータを取得する;
     const U8g2font efontTW_24_b   = { lgfx_efont_tw_24_b  };
     const U8g2font efontTW_24_bi  = { lgfx_efont_tw_24_bi };
     const U8g2font efontTW_24_i   = { lgfx_efont_tw_24_i  };
+
+    const U8g2font efontBubblyBold16 = { lgfx_efont_bubbly_bold_16 };
+    const U8g2font efontTomorrowNight10 = { lgfx_efont_tomorrow_night_10 };
+
+
   }
  }
 }

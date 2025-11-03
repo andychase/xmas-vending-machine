@@ -1,6 +1,9 @@
 #include "xmas_utils.h"
 #include "../../common_define.h"
 
+#define XMAS_FONT_SCALE 7
+#define XMAS_FONT_SIZE 10
+
 namespace MOONCAKE
 {
     namespace USER_APP
@@ -9,12 +12,22 @@ namespace MOONCAKE
         {
             void Utils::drawCenterString(HAL::HAL* hal, const char* string)
             {
+                
                 LGFX_Sprite* canvas = hal->canvas;
                 canvas->clear();
-                canvas->setTextSize(5);
-                canvas->setTextColor((uint32_t)0xF3E9D2);
-                canvas->setFont(&fonts::efontCN_24);
-                canvas->drawCenterString(string, hal->display.width() / 2, hal->display.height() / 2 - 60);
+                // #000000 background
+                canvas->fillScreen(canvas->color565(0x00, 0x00, 0x00));
+                canvas->setTextSize(XMAS_FONT_SCALE);
+                canvas->setFont(&fonts::efontTomorrowNight10);
+                int textHeight = canvas->fontHeight();
+                int y = ((hal->display.height() - textHeight) / 2) - 5;
+                // #525252 shadow
+                canvas->setTextColor(canvas->color565(0x52, 0x52, 0x52));
+                canvas->drawCenterString(string, (hal->display.width() / 2), y + 5);
+                // #FFFDFE main text
+                canvas->setTextColor(canvas->color565(0xFF, 0xFD, 0xFE));
+                canvas->drawCenterString(string, (hal->display.width() / 2), y);
+
                 canvas->pushSprite(0, 0);
                 canvas->setTextSize(1);
             }
