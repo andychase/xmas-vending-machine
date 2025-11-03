@@ -27,7 +27,9 @@ namespace MOONCAKE
                 uint8_t currentSong = 0;
                 unsigned int startCount = 0;
                 unsigned int rainbowTimeCounter = 0;
-                unsigned int currentSelection = 0;
+                TickType_t lastButtonCheckTick = 0;
+                unsigned int currentSelection = 1;
+                bool sensedPinState[16] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
             public:
                 XMAS::Data_t _data;
 
@@ -45,6 +47,7 @@ namespace MOONCAKE
                 void onCreate();
                 void onRunning();
                 void onRunningLights();
+                void scanButtons();
                 void onRunningButtons();
                 void onDestroy();
         };

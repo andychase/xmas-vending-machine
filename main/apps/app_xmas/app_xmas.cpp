@@ -4,6 +4,7 @@
 #include <i2cdev.h>
 #include <mcp23x17.h>
 #include <driver/i2c.h>
+#include <cmath>
 
 #include "utils/xmas_img.h"
 
@@ -31,16 +32,19 @@
 #define SECTION_SIZE (LED_COUNT / SECTIONS)
 #define TRANSITION_STEP 1
 
+#define SCAN_BUTTONS_MS 1000
+
 using namespace MOONCAKE::USER_APP;
 
 static esp_err_t ret;
 static mcp23x17_t dev[4];
-static const int ACTIVE_PINS[][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
-static const int READ_PINS[][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
+static const int ACTIVE_PINS[4][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
+static const int READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
+
+#define PIN_GROUP_SIZE 4    
+#define TOTAL_PINS 16
 
 static const int ADDRESSES[] = {0, 1, 2, 3};
-
-
 
 struct PinSelection
 {
@@ -51,16 +55,14 @@ struct PinSelection
 
 PinSelection selectPin(int index, const int (*GROUP)[4] = ACTIVE_PINS)
 {
-    for (int group = 0; group < sizeof(ACTIVE_PINS) / sizeof(ACTIVE_PINS[0]); group++)
+    // Assume all groups have the same number of pins
+    if (index < 0 || index > TOTAL_PINS)
     {
-        int groupSize = sizeof(GROUP[group]) / sizeof(GROUP[group][0]);
-        if (index < groupSize)
-        {
-            return {ADDRESSES[group], GROUP[group][index]};
-        }
-        index -= groupSize;
+        return { 0, 0 };
     }
-    return {0, 0};
+    int groupIndex = index / PIN_GROUP_SIZE;
+    int pinIndex = index % PIN_GROUP_SIZE;
+    return { ADDRESSES[groupIndex], GROUP[groupIndex][pinIndex] };
 }
 
 rgb_t color_wheel(uint8_t pos, float gamma) {
@@ -182,6 +184,8 @@ void Xmas::onCreate()
         }
     }
 
+    scanButtons();
+    lastButtonCheckTick = xTaskGetTickCount();
     startLights();
 }
 
@@ -193,6 +197,7 @@ void Xmas::playSong(int songId) {
         tone = XMAS::songs[songId][0][thisNote];
         duration = XMAS::songs[songId][1][thisNote] * XMAS::songConstants[songId][0] * 0.1;
         pauseDuration = (XMAS::songs[songId][1][thisNote] * XMAS::songConstants[songId][1] * 0.1) - duration;
+        pauseDuration = std::max(0, pauseDuration);
         if (duration != 0) {
             _data.hal->buzz.tone(tone, duration, pauseDuration);
         }
@@ -259,6 +264,18 @@ void Xmas::onRunningLights() {
     led_strip_spi_flush(&led_strip);
 }
 
+void Xmas::scanButtons() {
+    for (int i = 0; i < TOTAL_PINS; i++)
+    {
+        PinSelection sel = selectPin(i, READ_PINS);
+        uint32_t val = 0;
+        ret = gpio_compat_read(&dev[sel.address], sel.pin, &val);
+        if (ret == ESP_OK) {
+            sensedPinState[i] = (val == 0);
+        }
+    }
+}
+
 void Xmas::onRunningButtons() {
     uint32_t buttonState = 0;
     ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
@@ -267,6 +284,7 @@ void Xmas::onRunningButtons() {
     { 
         PinSelection selectedPin = selectPin(currentSelection - 1);
         _log("button pushed, address: %u, pin: %u", selectedPin.address, selectedPin.pin);
+        sensedPinState[currentSelection - 1] = false;
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
         delay(250);
         gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
@@ -293,20 +311,38 @@ void Xmas::onRunningButtons() {
             currentSong = 0;
     }
 
-    if (_data.hal->encoder.wasMoved(true)){
+    if (_data.hal->encoder.wasMoved(true)) {
         uint oldSection = currentSelection;
-        currentSelection = ((((_data.hal->encoder.getCount() / 2) % 16) + 16) % 16 + 1);
-        if (oldSection != currentSelection) {
-            rainbowTimeCounter = 0;
+        // Get number of active sensedPinState pins
+        u_int8_t numberSensed = 0;
+        for (int i = 0; i < TOTAL_PINS; i++) {
+            if (sensedPinState[i]) {
+                numberSensed++;
+            }
         }
-        PinSelection selectedPin = selectPin(currentSelection - 1, READ_PINS);
-        uint32_t val = 0;
-        gpio_compat_read(&dev[selectedPin.address], selectedPin.pin, &val);
-        if (val) {
-            XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
+        if (numberSensed == 0) {
+            XMAS::Utils::drawCenterString(_data.hal, ":)");
         } else {
-            XMAS::Utils::drawCenterString(_data.hal, (std::to_string(currentSelection) + "*").c_str());
+            currentSelection = (((_data.hal->encoder.getCount() / 2) % numberSensed) + numberSensed) % numberSensed + 1;
+            for (int i = 0, j = 0; i < TOTAL_PINS; i++) {
+                if (sensedPinState[i]) {
+                    j++;
+                    if (j == currentSelection) {
+                        currentSelection = i + 1;
+                        break;
+                    }
+                }
+            }
+            if (oldSection != currentSelection) {
+                rainbowTimeCounter = 0;
+            }
+            XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         }
+    }
+
+    if ((lastButtonCheckTick - xTaskGetTickCount()) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
+        scanButtons();
+        lastButtonCheckTick = xTaskGetTickCount();
     }
 }
 
