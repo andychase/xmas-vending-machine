@@ -328,11 +328,13 @@ void Xmas::onRunningButtons() {
                 XMAS::Utils::showAnimation(
                 &XMASPIMAGE2, 
                 _data.hal->canvas,
-                (_data.hal->display.width() / 2) - (XMASPIMAGE2.width/2), \
-                (_data.hal->display.height() / 2) - (XMASPIMAGE2.height/2), 
+                (_data.hal->display.width() / 2) - ((XMASPIMAGE2.width/2)*4),
+                (_data.hal->display.height() / 2) - ((XMASPIMAGE2.height/2)*4), 
                 20,
                 3000,
-                0x000000
+                0x000000,
+                4.0f, 
+                4.0f
             );
             _data.hal->display.setBrightness(0);
         } else {

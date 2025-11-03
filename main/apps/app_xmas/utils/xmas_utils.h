@@ -18,14 +18,18 @@ namespace MOONCAKE
                                       uint8_t frameToDraw,
                                       uint8_t x,
                                       uint8_t y,
-                                      int backgroundColor);
+                                      int backgroundColor,
+                                    float scaleX = 1.0f,
+                                    float scaleY = 1.0f);
                     static void showAnimation(const xmas_img_t* image,
                                        LGFX_Sprite* canvas,
                                        uint8_t x,
                                        uint8_t y,
                                        uint8_t fps,
                                        int animationTimeMs,
-                                       int backgroundColor);
+                                       int backgroundColor,
+                                       float scaleX = 1.0f,
+                                       float scaleY = 1.0f);
             };
         }
     }
