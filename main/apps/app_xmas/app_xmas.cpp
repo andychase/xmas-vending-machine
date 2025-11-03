@@ -40,7 +40,6 @@ static const int READ_PINS[][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3,
 
 static const int ADDRESSES[] = {0, 1, 2, 3};
 
-static TickType_t lastFlushTick = 0;
 
 
 struct PinSelection
@@ -257,12 +256,7 @@ void Xmas::onRunningLights() {
         }
     }
 
-    // Throttle SPI flush to 10Hz (adjust ms as needed). Flushing every frame
-    TickType_t nowMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    if ((nowMs - lastFlushTick) >= 100) {
     led_strip_spi_flush(&led_strip);
-        lastFlushTick = nowMs;
-    }
 }
 
 void Xmas::onRunningButtons() {
