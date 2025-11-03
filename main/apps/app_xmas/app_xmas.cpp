@@ -6,7 +6,9 @@
 #include <driver/i2c.h>
 
 #include "utils/xmas_img.h"
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 
 #define SDA_GPIO GPIO_NUM_13
 #define SCL_GPIO GPIO_NUM_15
@@ -40,14 +42,34 @@ static const int READ_PINS[][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3,
 
 static const int ADDRESSES[] = {0, 1, 2, 3};
 
-static TickType_t lastFlushTick = 0;
-
 
 struct PinSelection
 {
     int address;
     int pin;
 };
+
+static QueueHandle_t cmdQueue = nullptr;
+static QueueHandle_t cmdQueueRcv = nullptr;
+void led_strip_flush_task(void* pvParameters);
+
+
+enum CmdProtocolEnum {
+    CMD_CHECK_BUTTON = 0,
+    CMD_READ_STATE = 1,
+    CMD_WRITE_STATE = 2,
+    CMD_SEND_LIGHTS = 3,
+    RCV_LIGHTS_OK = 4,
+    RCV_BUTTON_PRESSED = 5
+};
+
+struct CmdParams {
+    CmdProtocolEnum cmd;
+    PinSelection pinSelect;
+    uint32_t value;
+};
+
+bool lightSendQueued = false;
 
 
 PinSelection selectPin(int index, const int (*GROUP)[4] = ACTIVE_PINS)
@@ -184,6 +206,23 @@ void Xmas::onCreate()
     }
 
     startLights();
+
+    if (!cmdQueue) {
+        cmdQueue = xQueueCreate(1, sizeof(CmdParams));
+    }
+    if (!cmdQueueRcv) {
+        cmdQueueRcv = xQueueCreate(1, sizeof(CmdParams));
+    }
+
+    // Start the flush task (pass pointer to led_strip)
+    xTaskCreate(
+        led_strip_flush_task,
+        "led_strip_flush_task",
+        2048,
+        (void*)&led_strip,
+        5,
+        nullptr
+    );
 }
 
 void Xmas::playSong(int songId) {
@@ -256,26 +295,28 @@ void Xmas::onRunningLights() {
             led_strip_spi_set_pixel(&led_strip, base + 143, {0, 0, 0});
         }
     }
-
-    // Throttle SPI flush to 10Hz (adjust ms as needed). Flushing every frame
-    TickType_t nowMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    if ((nowMs - lastFlushTick) >= 100) {
-    led_strip_spi_flush(&led_strip);
-        lastFlushTick = nowMs;
-    }
 }
 
 void Xmas::onRunningButtons() {
     uint32_t buttonState = 0;
-    ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
+    CmdParams cmdParams;
+    cmdParams = {
+        .cmd = CMD_READ_STATE,
+        .pinSelect = {0, MCP23017_PIN_BUTTON},
+        .value = 0
+    };
+    xQueueSend(cmdQueue, &cmdParams, portMAX_DELAY);
+    xQueueReceive(cmdQueueRcv, &cmdParams, portMAX_DELAY);
+    buttonState = cmdParams.value;  
+    //ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
     
-    if (ret == ESP_OK && buttonState == 0)
+    if (buttonState == 0)
     { 
         PinSelection selectedPin = selectPin(currentSelection - 1);
         _log("button pushed, address: %u, pin: %u", selectedPin.address, selectedPin.pin);
-        gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
+        //gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
         delay(250);
-        gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
+        //gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
         XMAS::Utils::showAnimation(
             &XMASPIMAGE1, 
             _data.hal->canvas,
@@ -288,7 +329,7 @@ void Xmas::onRunningButtons() {
         // playSong(currentSong++);
         // if (currentSong >= 13)
         //     currentSong = 0;
-        XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
+        
     }
 
     if (!_data.hal->encoder.btn.read()) {
@@ -307,7 +348,7 @@ void Xmas::onRunningButtons() {
         }
         PinSelection selectedPin = selectPin(currentSelection - 1, READ_PINS);
         uint32_t val = 0;
-        gpio_compat_read(&dev[selectedPin.address], selectedPin.pin, &val);
+        //gpio_compat_read(&dev[selectedPin.address], selectedPin.pin, &val);
         if (val) {
             XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         } else {
@@ -318,9 +359,55 @@ void Xmas::onRunningButtons() {
 
 void Xmas::onRunning()
 {
-    onRunningLights();
+    CmdParams cmdParams;
+    if (lightSendQueued == false) {
+        onRunningLights();
+        cmdParams = {
+            .cmd = CMD_SEND_LIGHTS,
+            .pinSelect = {0, 0},
+            .value = 0
+        };
+        if (xQueueSend(cmdQueue, &cmdParams, 0) == pdTRUE) {
+            lightSendQueued = true;
+        }
+    }
+    if (xQueueReceive(cmdQueueRcv, &cmdParams, portMAX_DELAY) == pdTRUE) {
+        if (cmdParams.cmd == RCV_LIGHTS_OK) {
+            lightSendQueued = false;
+        }
+    }
     onRunningButtons();
     delay(1);
 }
 
 void Xmas::onDestroy() { _log("onDestroy"); }
+
+void led_strip_flush_task(void* pvParameters) {
+    led_strip_spi_t& led_strip = *(led_strip_spi_t*)pvParameters;
+    CmdParams params = {}; 
+    static esp_err_t ret;
+    while (1) {
+        if (xQueueReceive(cmdQueue, &params, portMAX_DELAY) == pdTRUE) {
+            if (params.cmd == CMD_SEND_LIGHTS) {
+                led_strip_spi_flush(&led_strip);
+                params = {.cmd = RCV_LIGHTS_OK};
+                xQueueSend(cmdQueueRcv, &params, portMAX_DELAY);
+            } else if (params.cmd == CMD_CHECK_BUTTON) {
+                XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
+            } else if (params.cmd == CMD_READ_STATE) {
+                uint32_t value = 0;
+                ret = gpio_compat_read(&dev[params.pinSelect.address], params.pinSelect.pin, &value);
+                if (ret == ESP_OK) {
+                        params = {
+                        .cmd = RCV_BUTTON_PRESSED,
+                        .pinSelect = params.pinSelect,
+                        .value = value
+                    };
+                    xQueueSend(cmdQueueRcv, &params, portMAX_DELAY);
+                }
+            } else if (params.cmd == CMD_WRITE_STATE) {
+                gpio_compat_write(&dev[params.pinSelect.address], params.pinSelect.pin, params.value);
+            }
+        }
+    }
+}
