@@ -144,7 +144,7 @@ void Xmas::onSetup()
 void Xmas::onCreate()
 {
     _log("onCreate");
-    XMAS::Utils::drawCenterString(_data.hal, "XMAS");
+    XMAS::Utils::drawCenterString(_data.hal, "");
     gpio_compat_i2cScan(I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     
     ret = i2cdev_init();
@@ -218,7 +218,7 @@ void Xmas::onRunningLights() {
 
     rainbowTimeCounter++;
     if (rainbowTimeCounter < 500) {
-          for (int i = 0; i < LED_COUNT; i++) {
+        for (int i = 0; i < LED_COUNT; i++) {
             led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
         }
         LEDSectionStruct ledSectionStruct = calculateSections(currentSelection-1, 18);
@@ -243,6 +243,8 @@ void Xmas::onRunningLights() {
                 led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endB - i, {0, 0, 0});
             }
         }
+    } else {
+        _data.hal->display.setBrightness(0);
     }
 
     // Turn off edge LEDs so they don't overhead
@@ -294,7 +296,8 @@ void Xmas::onRunningButtons() {
             (_data.hal->display.width() / 2) - (XMASPIMAGE1.width/2), \
             (_data.hal->display.height() / 2) - (XMASPIMAGE1.height/2), 
             5,
-            3000
+            3000,
+            0xFFFFFF
         );
         XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         // playSong(currentSong++);
@@ -320,8 +323,18 @@ void Xmas::onRunningButtons() {
                 numberSensed++;
             }
         }
-        if (numberSensed == 0) {
-            XMAS::Utils::drawCenterString(_data.hal, ":)");
+            if (numberSensed == 0) {
+                _data.hal->display.setBrightness(128);
+                XMAS::Utils::showAnimation(
+                &XMASPIMAGE2, 
+                _data.hal->canvas,
+                (_data.hal->display.width() / 2) - (XMASPIMAGE2.width/2), \
+                (_data.hal->display.height() / 2) - (XMASPIMAGE2.height/2), 
+                20,
+                3000,
+                0x000000
+            );
+            _data.hal->display.setBrightness(0);
         } else {
             currentSelection = (((_data.hal->encoder.getCount() / 2) % numberSensed) + numberSensed) % numberSensed + 1;
             for (int i = 0, j = 0; i < TOTAL_PINS; i++) {
@@ -333,9 +346,8 @@ void Xmas::onRunningButtons() {
                     }
                 }
             }
-            if (oldSection != currentSelection) {
-                rainbowTimeCounter = 0;
-            }
+            rainbowTimeCounter = 0;
+            _data.hal->display.setBrightness(128);
             XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         }
     }

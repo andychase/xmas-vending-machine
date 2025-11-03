@@ -57,24 +57,24 @@ namespace MOONCAKE
                 return false;
             }
 
-            void Utils::drawImgFrame(const xmas_img_t* image, LGFX_Sprite* canvas, uint8_t frameToDraw, uint8_t x, uint8_t y)
+            void Utils::drawImgFrame(const xmas_img_t* image, LGFX_Sprite* canvas, uint8_t frameToDraw, uint8_t x, uint8_t y, int backgroundColor)
             {
                 frameToDraw = frameToDraw % image->framecount;
                 int offX = frameToDraw * image->width;
                 canvas->clear();
-                canvas->fillScreen(0xFFFFFF);
+                canvas->fillScreen(backgroundColor);
                 canvas->drawQoi((const uint8_t*)image->data, image->data_size, x, y, image->width, image->height, offX, 0);
                 canvas->pushSprite(0, 0);
             }
 
-            void Utils::showAnimation(const xmas_img_t* image, LGFX_Sprite* canvas, uint8_t x, uint8_t y, uint8_t fps, int animationTimeMs) {
+            void Utils::showAnimation(const xmas_img_t* image, LGFX_Sprite* canvas, uint8_t x, uint8_t y, uint8_t fps, int animationTimeMs, int backgroundColor) {
                 uint8_t totalFrames = image->framecount;
                 uint8_t frameDurationMs = 1000 / fps;
                 uint8_t totalAnimationFrames = animationTimeMs / frameDurationMs;
 
                 for (uint8_t frame = 0; frame < totalAnimationFrames; frame++) {
                     uint8_t currentFrame = frame % totalFrames;
-                    drawImgFrame(image, canvas, currentFrame, x, y);
+                    drawImgFrame(image, canvas, currentFrame, x, y, backgroundColor);
                     delay(frameDurationMs);
                 }
             }
