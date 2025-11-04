@@ -7,11 +7,10 @@
 #include <cmath>
 
 #include "utils/xmas_img.h"
+#include "utils/xmas_lights.h"
 
 #define MCP23017_PIN_LED 8    // GPIO pin connected to the LED
 #define MCP23017_PIN_BUTTON 0 // GPIO pin connected to the button
-
-#define SPI_CLOCK_SPEED_HZ 300'000
 
 #define SECTIONS 4
 #define SECTION_SIZE (LED_COUNT / SECTIONS)
@@ -28,27 +27,35 @@ static const uint8_t ACTIVE_PINS[1][4] = {{0, 0, 0, 0}};
 static const uint8_t READ_PINS[1][4] = {{2, 2, 2, 2}};
 #define SDA_GPIO GPIO_NUM_1
 #define SCL_GPIO GPIO_NUM_2
-#define XMAS_SPI_HOST SPI3_HOST
-#define LED_COUNT 15 // Number of LEDs in the strip
-#define CLOCK_PIN 9   // GPIO for clock input (CLK)
-#define DATA_PIN 8    // GPIO for data input (MOSI)
 #define PIN_GROUP_SIZE 4   
 #define TOTAL_PINS 4
 #define USE_ENCODER_FOR_SELECTION 1
-#define RUN_LIGHTS 0
+#define RUN_BUTTON_SCAN 0
 #else
 static mcp23x17_t dev[4];
 static const uint8_t ACTIVE_PINS[4][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
 static const uint8_t READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
 #define SDA_GPIO GPIO_NUM_13
 #define SCL_GPIO GPIO_NUM_15
+#define PIN_GROUP_SIZE 4    
+#define TOTAL_PINS 16
+#define USE_ENCODER_FOR_SELECTION 0
+#define RUN_BUTTON_SCAN 1
+#endif
+
+// Info about lights
+#define SPI_CLOCK_SPEED_HZ 300'000
+#ifdef CONFIG_USING_SIMULATOR
+#define XMAS_SPI_HOST SPI3_HOST
+#define LED_COUNT 15 // Number of LEDs in the strip
+#define CLOCK_PIN 9   // GPIO for clock input (CLK)
+#define DATA_PIN 8    // GPIO for data input (MOSI)
+#define RUN_LIGHTS 0
+#else
 #define XMAS_SPI_HOST SPI2_HOST
 #define LED_COUNT 576 // Number of LEDs in the strip
 #define CLOCK_PIN 2   // GPIO for clock input (CLK)
 #define DATA_PIN 1    // GPIO for data input (MOSI)
-#define PIN_GROUP_SIZE 4    
-#define TOTAL_PINS 16
-#define USE_ENCODER_FOR_SELECTION 0
 #define RUN_LIGHTS 0
 #endif
 
@@ -75,71 +82,10 @@ PinSelection selectPin(int index, const uint8_t (*GROUP)[4] = ACTIVE_PINS)
     return { ADDRESSES[groupIndex], GROUP[groupIndex][pinIndex] };
 }
 
-rgb_t color_wheel(uint8_t pos, float gamma) {
-    pos = 255 - pos; 
-    rgb_t color;
-
-    if (pos < 85) {
-        color.red = (uint8_t)(255 - pos * 3);
-        color.green = 0;
-        color.blue = (uint8_t)(pos * 3);
-    } else if (pos < 170) {
-        pos -= 85;
-        color.red = 0;
-        color.green = (uint8_t)(pos * 3);
-        color.blue = (uint8_t)(255 - pos * 3);
-    } else {
-        pos -= 170;
-        color.red = (uint8_t)(pos * 3);
-        color.green = (uint8_t)(255 - pos * 3);
-        color.blue = 0;
-    }
-
-    return apply_gamma2rgb(color, gamma);
-}
-
-struct LEDSectionStruct {
-    int startA;
-    int endA;
-    int startB;
-    int endB;
-};
-
-
-LEDSectionStruct calculateSections(int section, int sectionSize) {
-    LEDSectionStruct result;
-    result.startA = (section % 4) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
-    result.endA = ((section % 4) + 1) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
-    result.startB = (sectionSize * 8) - ((section % 4 + 1) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
-    result.endB = (sectionSize * 8) - ((section % 4) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
-    return result;
-}
 
 void Xmas::startLights() {
-        // Step 1: Install the driver
-    ret = led_strip_spi_install();
-    if (ret != ESP_OK) {
-        printf("Failed to install SPI LED strip driver. Error: %d\n", ret);
-        return;
-    }
-
-    // Step 2: Create and initialize the strip descriptor
-    led_strip = LED_STRIP_SPI_DEFAULT_ESP32();
-    led_strip.length = LED_COUNT;  // Set the number of LEDs
-    led_strip.mosi_io_num = DATA_PIN;   // Set the Data pin (DI)
-    led_strip.sclk_io_num = CLOCK_PIN; // Set the Clock pin (CI)
-    led_strip.max_transfer_sz = LED_STRIP_SPI_BUFFER_SIZE(LED_COUNT);
-    led_strip.clock_speed_hz = SPI_CLOCK_SPEED_HZ;
-    led_strip.host_device = XMAS_SPI_HOST;
-
-    // Step 3: Initialize the LED strip
-    ret = led_strip_spi_init((led_strip_spi_t*)&led_strip);
-    if (ret != ESP_OK) {
-        printf("Failed to initialize SPI LED strip. Error: %d\n", ret);
-        return;
-    } else {
-        printf("LED strip initialized successfully.\n");
-    }
+    if (!lights) lights = new XMAS::XmasLights(LED_COUNT);
+    lights->startLights(CLOCK_PIN, DATA_PIN, SPI_CLOCK_SPEED_HZ, XMAS_SPI_HOST);
 }
 
 void Xmas::onSetup()
@@ -163,9 +109,9 @@ void Xmas::onCreate()
         printf("Failed to initialize I2C driver: %s\n", esp_err_to_name(ret));
     }
 
-    for (int addr = 0x20; addr < 0x21; addr++)
+    for (int addr = 0x21; addr <= 0x24; addr++)
     {
-        compat_gpio_dev_t* _dev = &dev[addr - 0x20];
+        compat_gpio_dev_t* _dev = &dev[addr - 0x21];
         gpio_compat_init(_dev, addr, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     }
 
@@ -216,68 +162,8 @@ void Xmas::playSong(int songId) {
 }
 
 
-void Xmas::onRunningLights() {
-    for (int i = 0; i < LED_COUNT; i++) {
-        rgb_t color = color_wheel((hue + (i * 256 / LED_COUNT)) & 255, 1);
-        color.b *= 0.5;
-        color.g *= 0.5;
-        color.r *= 0.5;
-        led_strip_spi_set_pixel(&led_strip, i, color);
-    }
-    hue++;
-
-    rainbowTimeCounter++;
-    if (rainbowTimeCounter < 500) {
-        for (int i = 0; i < LED_COUNT; i++) {
-            led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
-        }
-        LEDSectionStruct ledSectionStruct = calculateSections(currentSelection-1, 18);
-        for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++) {
-            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
-        }
-        for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++) {
-            led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
-        }
-        // Narrow section a bit by blanking first and last few LEDs
-        for (int i = 0; i < 4; i++) {
-            if ((ledSectionStruct.startA + i) < LED_COUNT) {
-                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startA + i, {0, 0, 0});
-            }
-            if ((ledSectionStruct.endA - i) < LED_COUNT) {
-                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endA - i, {0, 0, 0});
-            }
-            if ((ledSectionStruct.startB + i) < LED_COUNT) {
-                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startB + i, {0, 0, 0});
-            }
-            if ((ledSectionStruct.endB - i) < LED_COUNT) {
-                led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endB - i, {0, 0, 0});
-            }
-        }
-    } else {
-        _data.hal->display.setBrightness(0);
-    }
-
-    // Turn off edge LEDs so they don't overhead
-    for (int base = 0; base < LED_COUNT; base += 144) {
-        if (base < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base, {0, 0, 0});
-        }
-        if ((base + 71) < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base + 71, {0, 0, 0});
-        }
-        if ((base + 72) < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base + 72, {0, 0, 0});
-        }
-        if ((base + 143) < LED_COUNT) {
-            led_strip_spi_set_pixel(&led_strip, base + 143, {0, 0, 0});
-        }
-    }
-
-    led_strip_spi_flush(&led_strip);
-}
-
 void Xmas::scanButtons() {
-    if (!RUN_LIGHTS) {
+    if (!RUN_BUTTON_SCAN) {
         return;
     }
     for (int i = 0; i < TOTAL_PINS; i++)
@@ -292,6 +178,7 @@ void Xmas::scanButtons() {
 }
 
 void Xmas::onRunningButtons() {
+    LGFX_StampRing display = _data.hal->display;
     bool encoderButtonPressed = false;
     if (!_data.hal->encoder.btn.read())
     {
@@ -323,8 +210,8 @@ void Xmas::onRunningButtons() {
         XMAS::Utils::showAnimation(
             &XMASPIMAGE1, 
             _data.hal->canvas,
-            (_data.hal->display.width() / 2) - (XMASPIMAGE1.width/2), \
-            (_data.hal->display.height() / 2) - (XMASPIMAGE1.height/2), 
+            (display.width() / 2) - (XMASPIMAGE1.width/2), \
+            (display.height() / 2) - (XMASPIMAGE1.height/2), 
             5,
             3000,
             0xFFFFFF
@@ -351,8 +238,8 @@ void Xmas::onRunningButtons() {
                 numberSensed++;
             }
         }
-            if (numberSensed == 0) {
-                _data.hal->display.setBrightness(128);
+        if (numberSensed == 0) {
+                display.setBrightness(128);
                 XMAS::Utils::showAnimation(
                 &XMASPIMAGE2, 
                 _data.hal->canvas,
@@ -364,7 +251,7 @@ void Xmas::onRunningButtons() {
                 4.0f, 
                 4.0f
             );
-            _data.hal->display.setBrightness(0);
+           display.setBrightness(0);
         } else {
             currentSelection = (((_data.hal->encoder.getCount() / 2) % numberSensed) + numberSensed) % numberSensed + 1;
             for (int i = 0, j = 0; i < TOTAL_PINS; i++) {
@@ -376,8 +263,8 @@ void Xmas::onRunningButtons() {
                     }
                 }
             }
-            rainbowTimeCounter = 0;
-            _data.hal->display.setBrightness(128);
+            lights->rainbowTimeCounter = 0;
+            display.setBrightness(128);
             XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
         }
     }
@@ -386,13 +273,18 @@ void Xmas::onRunningButtons() {
         scanButtons();
         lastButtonCheckTick = xTaskGetTickCount();
     }
+    
+    if (lights->rainbowTimeCounter < 500) {
+        lights->rainbowTimeCounter++;
+    } else {
+        display.setBrightness(0);
+    }
+
 }
 
 void Xmas::onRunning()
 {
-    if (RUN_LIGHTS) {
-        onRunningLights();
-    }
+    lights->onRunningLights(currentSelection);
     onRunningButtons();
     delay(1);
 }

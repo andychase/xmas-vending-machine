@@ -5,6 +5,7 @@
 #include <led_strip_spi.h>
 #include "../../hal/arduino/Tone.h"
 #include "utils/xmas_utils.h"
+#include "utils/xmas_lights.h"
 
 namespace MOONCAKE
 {
@@ -22,14 +23,12 @@ namespace MOONCAKE
         {
             private:
                 const char* _tag = "XMAS";
-                led_strip_spi_esp32_t led_strip;
-                uint8_t hue = 0;
                 uint8_t currentSong = 0;
                 unsigned int startCount = 0;
-                unsigned int rainbowTimeCounter = 0;
                 TickType_t lastButtonCheckTick = 0;
                 unsigned int currentSelection = 1;
                 bool sensedPinState[16] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
+                class XMAS::XmasLights* lights = nullptr;
             public:
                 XMAS::Data_t _data;
 
@@ -39,14 +38,13 @@ namespace MOONCAKE
                  * @brief Lifecycle callbacks for derived to override
                  *
                  */
-                void startLights();
+                void startLights(); // will delegate to XmasLights
                 /* Setup App configs, called when App "install()" */
                 void onSetup();
 
                 /* Life cycle */
                 void onCreate();
                 void onRunning();
-                void onRunningLights();
                 void scanButtons();
                 void onRunningButtons();
                 void onDestroy();
