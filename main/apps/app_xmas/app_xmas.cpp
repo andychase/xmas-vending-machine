@@ -8,25 +8,10 @@
 
 #include "utils/xmas_img.h"
 
-
-#define SDA_GPIO GPIO_NUM_13
-#define SCL_GPIO GPIO_NUM_15
-
 #define MCP23017_PIN_LED 8    // GPIO pin connected to the LED
 #define MCP23017_PIN_BUTTON 0 // GPIO pin connected to the button
 
 #define SPI_CLOCK_SPEED_HZ 300'000
-#ifdef CONFIG_USING_SIMULATOR
-#define XMAS_SPI_HOST SPI3_HOST
-#define LED_COUNT 15 // Number of LEDs in the strip
-#define CLOCK_PIN 9   // GPIO for clock input (CLK)
-#define DATA_PIN 8    // GPIO for data input (MOSI)
-#else
-#define XMAS_SPI_HOST SPI2_HOST
-#define LED_COUNT 576 // Number of LEDs in the strip
-#define CLOCK_PIN 2   // GPIO for clock input (CLK)
-#define DATA_PIN 1    // GPIO for data input (MOSI)
-#endif
 
 #define SECTIONS 4
 #define SECTION_SIZE (LED_COUNT / SECTIONS)
@@ -37,31 +22,56 @@
 using namespace MOONCAKE::USER_APP;
 
 static esp_err_t ret;
+#ifdef CONFIG_USING_SIMULATOR
+static mcp23x17_t dev[1];
+static const uint8_t ACTIVE_PINS[1][4] = {{0, 0, 0, 0}};
+static const uint8_t READ_PINS[1][4] = {{2, 2, 2, 2}};
+#define SDA_GPIO GPIO_NUM_1
+#define SCL_GPIO GPIO_NUM_2
+#define XMAS_SPI_HOST SPI3_HOST
+#define LED_COUNT 15 // Number of LEDs in the strip
+#define CLOCK_PIN 9   // GPIO for clock input (CLK)
+#define DATA_PIN 8    // GPIO for data input (MOSI)
+#define PIN_GROUP_SIZE 4   
+#define TOTAL_PINS 4
+#define USE_ENCODER_FOR_SELECTION 1
+#define RUN_LIGHTS 0
+#else
 static mcp23x17_t dev[4];
-static const int ACTIVE_PINS[4][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
-static const int READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
-
+static const uint8_t ACTIVE_PINS[4][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
+static const uint8_t READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
+#define SDA_GPIO GPIO_NUM_13
+#define SCL_GPIO GPIO_NUM_15
+#define XMAS_SPI_HOST SPI2_HOST
+#define LED_COUNT 576 // Number of LEDs in the strip
+#define CLOCK_PIN 2   // GPIO for clock input (CLK)
+#define DATA_PIN 1    // GPIO for data input (MOSI)
 #define PIN_GROUP_SIZE 4    
 #define TOTAL_PINS 16
+#define USE_ENCODER_FOR_SELECTION 0
+#define RUN_LIGHTS 0
+#endif
 
-static const int ADDRESSES[] = {0, 1, 2, 3};
+
+
+static const uint8_t ADDRESSES[] = {0, 1, 2, 3};
 
 struct PinSelection
 {
-    int address;
-    int pin;
+    uint8_t address;
+    uint8_t pin;
 };
 
 
-PinSelection selectPin(int index, const int (*GROUP)[4] = ACTIVE_PINS)
+PinSelection selectPin(int index, const uint8_t (*GROUP)[4] = ACTIVE_PINS)
 {
     // Assume all groups have the same number of pins
     if (index < 0 || index > TOTAL_PINS)
     {
         return { 0, 0 };
     }
-    int groupIndex = index / PIN_GROUP_SIZE;
-    int pinIndex = index % PIN_GROUP_SIZE;
+    uint8_t groupIndex = index / PIN_GROUP_SIZE;
+    uint8_t pinIndex = index % PIN_GROUP_SIZE;
     return { ADDRESSES[groupIndex], GROUP[groupIndex][pinIndex] };
 }
 
@@ -153,17 +163,17 @@ void Xmas::onCreate()
         printf("Failed to initialize I2C driver: %s\n", esp_err_to_name(ret));
     }
 
-    for (int addr = 0x21; addr <= 0x24; addr++)
+    for (int addr = 0x20; addr < 0x21; addr++)
     {
-        compat_gpio_dev_t* _dev = &dev[addr - 0x21];
+        compat_gpio_dev_t* _dev = &dev[addr - 0x20];
         gpio_compat_init(_dev, addr, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     }
 
     // Make sure other control units have their 0 pin off
     for (int i = 0; i < sizeof(dev) / sizeof(dev[0]); i++)
     {
-            gpio_compat_set_mode(&dev[i], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
-            gpio_compat_set_pullup(&dev[i], MCP23017_PIN_BUTTON, true);
+        gpio_compat_set_mode(&dev[i], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
+        gpio_compat_set_pullup(&dev[i], MCP23017_PIN_BUTTON, true);
     }
 
     gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
@@ -267,6 +277,9 @@ void Xmas::onRunningLights() {
 }
 
 void Xmas::scanButtons() {
+    if (!RUN_LIGHTS) {
+        return;
+    }
     for (int i = 0; i < TOTAL_PINS; i++)
     {
         PinSelection sel = selectPin(i, READ_PINS);
@@ -279,8 +292,25 @@ void Xmas::scanButtons() {
 }
 
 void Xmas::onRunningButtons() {
+    bool encoderButtonPressed = false;
+    if (!_data.hal->encoder.btn.read())
+    {
+        for(int i = 0; i < 100; i++) {
+            if (!_data.hal->encoder.btn.read()) {
+                delay(5);
+            } else {
+                break;
+            }
+        } 
+        encoderButtonPressed = true;
+    }
     uint32_t buttonState = 0;
-    ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
+    if (USE_ENCODER_FOR_SELECTION) {
+        buttonState = encoderButtonPressed ? 0 : 1;
+        ret = ESP_OK;
+    } else {
+        ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
+    }
     
     if (ret == ESP_OK && buttonState == 0)
     { 
@@ -306,9 +336,7 @@ void Xmas::onRunningButtons() {
         XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
     }
 
-    if (!_data.hal->encoder.btn.read()) {
-        while (!_data.hal->encoder.btn.read())
-            delay(5);
+    if (encoderButtonPressed) {
         playSong(currentSong++);
         if (currentSong >= 13)
             currentSong = 0;
@@ -362,7 +390,9 @@ void Xmas::onRunningButtons() {
 
 void Xmas::onRunning()
 {
-    onRunningLights();
+    if (RUN_LIGHTS) {
+        onRunningLights();
+    }
     onRunningButtons();
     delay(1);
 }

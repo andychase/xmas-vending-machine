@@ -55,14 +55,15 @@
     [ "r1:2", "chip1:GND", "black", [ "h0" ] ],
     [ "relay1:NO", "relay1:VCC", "red", [ "v36.6", "h-142.8", "v-57.6" ] ],
     [ "relay1:NC", "relay1:GND", "black", [ "h-56.4", "v-30", "h-96", "v38.8" ] ],
-    [ "relay1:IN", "chip1:P00", "green", [ "h0" ] ],
+    [ "relay1:IN", "chip1:P00", "cyan", [ "h0" ] ],
     [ "chip1:SDA", "esp:SDA", "gold", [ "h-151.79", "v28.8", "h-96" ] ],
     [ "chip1:SCL", "esp:SCL", "white", [ "h-142.19", "v28.8", "h-105.6" ] ],
     [ "esp:SCL", "chip1:SCK", "white", [ "h-142.19", "v28.8", "h-105.6" ] ],
     [ "chip1:VCC", "esp:VCC.1", "red", [ "h-209.39", "v27.28" ] ],
     [ "chip1:GND", "esp:GND.4", "black", [ "h-163.2", "v-87.92" ] ],
     [ "led1:C", "r1:1", "black", [ "v0" ] ],
-    [ "led1:A", "relay1:COM", "gray", [ "h9.6", "v-134.4", "h-68.4" ] ]
+    [ "led1:A", "relay1:COM", "gray", [ "h9.6", "v-134.4", "h-68.4" ] ],
+    [ "chip1:P02", "chip1:GND", "black", [ "h0" ] ]
   ],
   "dependencies": {}
 }

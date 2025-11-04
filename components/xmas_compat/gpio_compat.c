@@ -47,7 +47,21 @@ esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint8_t pin, uint32_t val) {
     return pcf8575_port_write(dev, temp_val);
 }
 
-void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {}
+void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {
+    uint32_t temp_val = 0;
+    esp_err_t err = pcf8575_port_read(dev, &temp_val);
+    if (err != ESP_OK) {
+        return;
+    }
+    if (mode == MCP23X17_GPIO_INPUT) {
+        // Set pin HIGH to make it input (quasi-bidirectional)
+        temp_val |= (1 << pin);
+    } else {
+        // Set pin LOW to make it output (driving low)
+        temp_val &= ~(1 << pin);
+    }
+    pcf8575_port_write(dev, temp_val);
+}
 
 
 void gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable) {}
