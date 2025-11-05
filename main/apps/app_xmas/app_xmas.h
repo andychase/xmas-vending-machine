@@ -6,6 +6,8 @@
 #include "../../hal/arduino/Tone.h"
 #include "utils/xmas_utils.h"
 #include "utils/xmas_lights.h"
+#include "utils/xmas_buttons.h"
+
 
 namespace MOONCAKE
 {
@@ -27,8 +29,9 @@ namespace MOONCAKE
                 unsigned int startCount = 0;
                 TickType_t lastButtonCheckTick = 0;
                 unsigned int currentSelection = 1;
-                bool sensedPinState[16] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
+                
                 class XMAS::XmasLights* lights = nullptr;
+                class XMAS::XmasButtons* buttons = nullptr;
             public:
                 XMAS::Data_t _data;
 
@@ -45,7 +48,6 @@ namespace MOONCAKE
                 /* Life cycle */
                 void onCreate();
                 void onRunning();
-                void scanButtons();
                 void onRunningButtons();
                 void onDestroy();
         };
