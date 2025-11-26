@@ -83,7 +83,7 @@ esp_err_t gpio_compat_init(compat_gpio_dev_t *dev, uint8_t addr, i2c_port_t port
     dev->mutex = NULL;
     dev->timeout_ticks = 0;
     esp_err_t ret = mcp23x17_init_desc(dev, dev->addr, dev->port, sda_gpio, scl_gpio);
-    dev->cfg.master.clk_speed = 100000;
+    dev->cfg.master.clk_speed = 20000;
     return ret;
 }
 
