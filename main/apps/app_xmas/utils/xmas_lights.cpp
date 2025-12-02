@@ -73,25 +73,25 @@ namespace MOONCAKE
             LEDSectionStruct XmasLights::calculateSections(int section, int sectionSize)
             {
                 LEDSectionStruct result;
-                // result.startA = (section % 4) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
-                // result.endA = ((section % 4) + 1) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
-                // result.startB =
-                //     (sectionSize * 8) - ((section % 4 + 1) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
-                // result.endB = (sectionSize * 8) - ((section % 4) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
+                result.startA = (section % 4) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
+                result.endA = ((section % 4) + 1) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
+                result.startB =
+                    (sectionSize * 8) - ((section % 4 + 1) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
+                result.endB = (sectionSize * 8) - ((section % 4) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
 
-                int totalSections = std::max(ledCount / std::max(sectionSize, 1), 1);
-                int base = sectionSize * totalSections * std::floor(section / totalSections);
+                // int totalSections = std::max(ledCount / std::max(sectionSize, 1), 1);
+                // int base = sectionSize * totalSections * std::floor(section / totalSections);
 
-                int startA = (section % totalSections) * sectionSize + base;
-                int endA = startA + sectionSize - 1;
-                int startB = (sectionSize * totalSections) - ((section % totalSections + 1) * sectionSize) + base;
-                int endB = startB + sectionSize - 1;
+                // int startA = (section % totalSections) * sectionSize + base;
+                // int endA = startA + sectionSize - 1;
+                // int startB = (sectionSize * totalSections) - ((section % totalSections + 1) * sectionSize) + base;
+                // int endB = startB + sectionSize - 1;
 
-                // Clamp to ledCount
-                result.startA = std::max(0, std::min(startA, (int)ledCount - 1));
-                result.endA   = std::max(0, std::min(endA,   (int)ledCount - 1));
-                result.startB = std::max(0, std::min(startB, (int)ledCount - 1));
-                result.endB   = std::max(0, std::min(endB,   (int)ledCount - 1));
+                // // Clamp to ledCount
+                // result.startA = std::max(0, std::min(startA, (int)ledCount - 1));
+                // result.endA   = std::max(0, std::min(endA,   (int)ledCount - 1));
+                // result.startB = std::max(0, std::min(startB, (int)ledCount - 1));
+                // result.endB   = std::max(0, std::min(endB,   (int)ledCount - 1));
                 
                 return result;
             }

@@ -17,15 +17,37 @@
 #define SECTION_SIZE (LED_COUNT / SECTIONS)
 #define TRANSITION_STEP 1
 
-#define SCAN_BUTTONS_MS 1000
+#define SCAN_BUTTONS_MS 3000
 
 using namespace MOONCAKE::USER_APP;
 
 static esp_err_t ret;
 
+// Info about buttons
+#ifdef CONFIG_USING_SIMULATOR
+static mcp23x17_t dev[1];
+static const uint8_t ACTIVE_PINS[1][4] = {{0, 0, 0, 0}};
+static const uint8_t READ_PINS[1][4] = {{2, 2, 2, 2}};
+#define SDA_GPIO GPIO_NUM_1
+#define SCL_GPIO GPIO_NUM_2
+#define PIN_GROUP_SIZE 4   
+#define TOTAL_PINS 4
+#define USE_ENCODER_FOR_SELECTION 1
+#define RUN_BUTTON_SCAN 0
+#else
+static mcp23x17_t dev[4];
+static const uint8_t ACTIVE_PINS[4][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
+static const uint8_t READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
+#define SDA_GPIO GPIO_NUM_13
+#define SCL_GPIO GPIO_NUM_15
+#define PIN_GROUP_SIZE 4    
+#define TOTAL_PINS 16
+#define USE_ENCODER_FOR_SELECTION 0
+#define RUN_BUTTON_SCAN 1
+#endif
 
 // Info about lights
-#define SPI_CLOCK_SPEED_HZ 300'000
+#define SPI_CLOCK_SPEED_HZ 400'000
 #ifdef CONFIG_USING_SIMULATOR
 #define XMAS_SPI_HOST SPI3_HOST
 #define LED_COUNT 15 // Number of LEDs in the strip
@@ -69,6 +91,8 @@ void Xmas::onCreate()
         SDA_GPIO,
         SCL_GPIO
     );
+    delay(10);
+    buttons->scanButtons();
     lastButtonCheckTick = xTaskGetTickCount();
     if (!lights) lights = new XMAS::XmasLights(LED_COUNT);
     lights->startLights(CLOCK_PIN, DATA_PIN, SPI_CLOCK_SPEED_HZ, XMAS_SPI_HOST);
@@ -161,6 +185,7 @@ void Xmas::onRunningButtons() {
                 4.0f
             );
            display.setBrightness(0);
+           _data.hal->encoder.wasMoved(true);
         } else {
             currentSelection = (((_data.hal->encoder.getCount() / 2) % numberSensed) + numberSensed) % numberSensed + 1;
             for (int i = 0, j = 0; i < TOTAL_PINS; i++) {

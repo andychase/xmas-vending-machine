@@ -6,30 +6,6 @@
 #include <mcp23x17.h>
 #include <cstdint>
 
-#ifdef CONFIG_USING_SIMULATOR
-static mcp23x17_t dev[1];
-static const uint8_t ACTIVE_PINS[1][4] = {{0, 0, 0, 0}};
-static const uint8_t READ_PINS[1][4] = {{2, 2, 2, 2}};
-#define SDA_GPIO GPIO_NUM_1
-#define SCL_GPIO GPIO_NUM_2
-#define PIN_GROUP_SIZE 4   
-#define TOTAL_PINS 4
-#define USE_ENCODER_FOR_SELECTION 1
-#define RUN_BUTTON_SCAN 0
-#else
-static mcp23x17_t dev[4];
-static const uint8_t ACTIVE_PINS[4][4] = {{8, 9, 10, 11}, {11, 10, 9, 8}, {11, 10, 9, 8}, {11, 10, 9, 8}};
-static const uint8_t READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}};
-#define SDA_GPIO GPIO_NUM_13
-#define SCL_GPIO GPIO_NUM_15
-#define PIN_GROUP_SIZE 4    
-#define TOTAL_PINS 16
-#define USE_ENCODER_FOR_SELECTION 0
-#define RUN_BUTTON_SCAN 1
-#endif
-
-static const uint8_t ADDRESSES[] = {0, 1, 2, 3};
-
 struct PinSelection
 {
     uint8_t address;
@@ -58,6 +34,9 @@ namespace XMAS {
         void scanButtons();
         void releaseLatch(int selection);
     private:
+        mcp23x17_t* dev;
+        const uint8_t (*ACTIVE_PINS)[4];
+        const uint8_t (*READ_PINS)[4];
         // Add private members as needed
     };
 } // namespace XMAS
