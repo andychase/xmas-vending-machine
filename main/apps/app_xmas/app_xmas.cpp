@@ -93,6 +93,7 @@ void Xmas::onCreate()
     );
     delay(10);
     buttons->scanButtons();
+    setCurrentSelection();
     lastButtonCheckTick = xTaskGetTickCount();
     if (!lights) lights = new XMAS::XmasLights(LED_COUNT);
     lights->startLights(CLOCK_PIN, DATA_PIN, SPI_CLOCK_SPEED_HZ, XMAS_SPI_HOST);
@@ -112,6 +113,14 @@ void Xmas::playSong(int songId) {
         }
     }
     _data.hal->buzz.noTone();
+}
+
+void Xmas::setCurrentSelection() {
+    int64_t encoderIndex = _data.hal->encoder.getCount() / 2;
+    // The extra modulo and addition handle negative values correctly
+    uint8_t numberSensed = buttons->numberOfClosedLatches();
+    encoderIndex = ((encoderIndex % numberSensed) + numberSensed) % numberSensed;
+    currentSelection = buttons->getnthClosedLatch(encoderIndex) + 1;
 }
 
 
@@ -163,14 +172,8 @@ void Xmas::onRunningButtons() {
     }
 
     if (_data.hal->encoder.wasMoved(true)) {
-        uint oldSection = currentSelection;
         // Get number of active sensedPinState pins
-        u_int8_t numberSensed = 0;
-        for (int i = 0; i < TOTAL_PINS; i++) {
-            if (buttons->sensedPinState[i]) {
-                numberSensed++;
-            }
-        }
+        u_int8_t numberSensed = buttons->numberOfClosedLatches();
         if (numberSensed == 0) {
                 display.setBrightness(128);
                 XMAS::Utils::showAnimation(
@@ -187,16 +190,7 @@ void Xmas::onRunningButtons() {
            display.setBrightness(0);
            _data.hal->encoder.wasMoved(true);
         } else {
-            currentSelection = (((_data.hal->encoder.getCount() / 2) % numberSensed) + numberSensed) % numberSensed + 1;
-            for (int i = 0, j = 0; i < TOTAL_PINS; i++) {
-                if (buttons->sensedPinState[i]) {
-                    j++;
-                    if (j == currentSelection) {
-                        currentSelection = i + 1;
-                        break;
-                    }
-                }
-            }
+            
             lights->rainbowTimeCounter = 0;
             display.setBrightness(128);
             XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());

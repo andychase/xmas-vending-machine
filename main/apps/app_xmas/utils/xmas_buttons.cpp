@@ -88,15 +88,44 @@ namespace MOONCAKE
                     ret = gpio_compat_read(&dev[sel.address], sel.pin, &val);
                     if (ret == ESP_OK)
                     {
-                        sensedPinState[i] = (val == 0);
+                        // Closed latches are low (0)
+                        sensedLatchClosed[i] = (val == 0);
                     }
                 }
+            }
+            bool XmasButtons::checkLatchIsClosed(uint8_t index)
+            {
+                if (index >= TOTAL_PINS)
+                {
+                    return false;
+                }
+                return sensedLatchClosed[index];
+            }
+            uint8_t XmasButtons::numberOfClosedLatches()
+            {
+                uint8_t count = 0;
+                for (int i = 0; i < TOTAL_PINS; i++)
+                    if (checkLatchIsClosed(i))
+                        count++;
+                return count;
+            }
+            uint8_t XmasButtons::getnthClosedLatch(uint8_t nthClosedIndex) {
+                uint8_t count = 0;
+                for (int i = 0; i < TOTAL_PINS; i++) {
+                    if (checkLatchIsClosed(i)) {
+                        if (count == nthClosedIndex) {
+                            return i;
+                        }
+                        count++;
+                    }
+                }
+                return 0;
             }
             void XmasButtons::releaseLatch(int selection)
             {
                 PinSelection selectedPin = selectPin(selection - 1, ACTIVE_PINS);
                 printf("button pushed, address: %u, pin: %u", selectedPin.address, selectedPin.pin);
-                sensedPinState[selection - 1] = false;
+                sensedLatchClosed[selection - 1] = false;
                 gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
                 delay(250);
                 gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);

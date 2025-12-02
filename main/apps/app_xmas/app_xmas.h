@@ -37,6 +37,8 @@ namespace MOONCAKE
 
                 void playSong(int songId);
 
+                void setCurrentSelection();
+
                 /**
                  * @brief Lifecycle callbacks for derived to override
                  *
