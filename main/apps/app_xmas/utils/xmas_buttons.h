@@ -33,6 +33,7 @@ namespace XMAS {
         );
         void scanButtons();
         void releaseLatch(int selection);
+        bool checkReleaseButton();
         bool checkLatchIsClosed(uint8_t index);
         uint8_t numberOfClosedLatches();
         uint8_t getnthClosedLatch(uint8_t nthClosedIndex);
@@ -41,6 +42,7 @@ namespace XMAS {
         const uint8_t (*ACTIVE_PINS)[4];
         const uint8_t (*READ_PINS)[4];
         bool sensedLatchClosed[16] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
+        int MCP23017_PIN_BUTTON;
         // Add private members as needed
     };
 } // namespace XMAS

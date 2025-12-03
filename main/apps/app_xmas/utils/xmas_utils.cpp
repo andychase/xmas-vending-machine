@@ -32,44 +32,6 @@ namespace MOONCAKE
                 canvas->setTextSize(1);
             }
 
-            bool Utils::checkButton(mcp23x17_t* dev, int pin_button)
-            {
-                esp_err_t ret;
-                uint16_t intf;
-                // Read the interrupt flags (INTF register)
-                ret = read_reg_16(dev, MCP_REG_INTFA, &intf);
-                if (ret != ESP_OK)
-                {
-                    printf("Failed to read interrupt flags: %s\n", esp_err_to_name(ret));
-                    return false;
-                }
-
-                // Check if BUTTON_PIN caused an interrupt
-                if (intf & (1 << pin_button))
-                {
-                    uint16_t intcap;
-
-                    // Read the interrupt capture register (INTCAP) to get the latched state
-                    ret = read_reg_16(dev, MCP_REG_INTCAPA, &intcap);
-                    if (ret != ESP_OK)
-                    {
-                        printf("Failed to read interrupt capture register: %s\n", esp_err_to_name(ret));
-                        return false;
-                    }
-
-                    // Clear level
-                    uint32_t val;
-                    mcp23x17_get_level(dev, pin_button, &val);
-
-                    // Check if BUTTON_PIN was low (reversed)
-                    if (!(intcap & (0 << pin_button)))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
             void Utils::drawImgFrame(const xmas_img_t* image, LGFX_Sprite* canvas, uint8_t frameToDraw, uint8_t x, uint8_t y, int backgroundColor, float scaleX, float scaleY)
             {
                 frameToDraw = frameToDraw % image->framecount;

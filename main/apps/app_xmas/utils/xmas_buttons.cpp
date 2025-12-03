@@ -41,6 +41,7 @@ namespace MOONCAKE
                 this->dev = dev;
                 this->ACTIVE_PINS = ACTIVE_PINS;
                 this->READ_PINS = READ_PINS;
+                this->MCP23017_PIN_BUTTON = MCP23017_PIN_BUTTON;
                 
                 gpio_compat_i2cScan(I2C_NUM_1, SDA_GPIO, SCL_GPIO);
                 esp_err_t ret = i2cdev_init();
@@ -63,7 +64,8 @@ namespace MOONCAKE
                 }
                 // Lowest shelf control unit handles the button
                 gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
-                gpio_compat_set_interrupt(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_INT_LOW_EDGE);
+                // Unfortunately due to interferance from i2c and spi can't use it
+                //gpio_compat_set_interrupt(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_INT_LOW_EDGE);
                 // Set latch pins as outputs 
                 for (int i = 0; i < TOTAL_PINS; i++)
                 {
@@ -124,11 +126,57 @@ namespace MOONCAKE
             void XmasButtons::releaseLatch(int selection)
             {
                 PinSelection selectedPin = selectPin(selection - 1, ACTIVE_PINS);
-                printf("button pushed, address: %u, pin: %u", selectedPin.address, selectedPin.pin);
+                printf("button pushed, address: %u, pin: %u\n", selectedPin.address, selectedPin.pin);
                 sensedLatchClosed[selection - 1] = false;
                 gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 1);
                 delay(250);
                 gpio_compat_write(&dev[selectedPin.address], selectedPin.pin, 0);
+            }
+            bool XmasButtons::checkReleaseButton()
+            {
+                esp_err_t ret;
+                uint32_t val = 0;
+                ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &val);
+                if (ret == ESP_OK)
+                {
+                    // Closed latches are low (0)
+                    return (val == 0);
+                }
+                return false;
+                // esp_err_t ret;
+                // uint16_t intf;
+                // // Read the interrupt flags (INTF register)
+                // ret = read_reg_16(&dev[0], MCP_REG_INTFA, &intf);
+                // if (ret != ESP_OK)
+                // {
+                //     printf("Failed to read interrupt flags: %s\n", esp_err_to_name(ret));
+                //     return false;
+                // }
+
+                // // Check if BUTTON_PIN caused an interrupt
+                // if (intf & (1 << MCP23017_PIN_BUTTON))
+                // {
+                //     uint16_t intcap;
+
+                //     // Read the interrupt capture register (INTCAP) to get the latched state
+                //     ret = read_reg_16(&dev[0], MCP_REG_INTCAPA, &intcap);
+                //     if (ret != ESP_OK)
+                //     {
+                //         printf("Failed to read interrupt capture register: %s\n", esp_err_to_name(ret));
+                //         return false;
+                //     }
+
+                //     // Clear level
+                //     uint32_t val;
+                //     mcp23x17_get_level(&dev[0], MCP23017_PIN_BUTTON, &val);
+
+                //     // Check if BUTTON_PIN was low (reversed)
+                //     if (!(intcap & (0 << MCP23017_PIN_BUTTON)))
+                //     {
+                //         return true;
+                //     }
+                // }
+                // return false;
             }
         } // namespace XMAS
     } // namespace USER_APP

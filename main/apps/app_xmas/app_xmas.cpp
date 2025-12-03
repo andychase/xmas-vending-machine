@@ -94,6 +94,8 @@ void Xmas::onCreate()
     delay(10);
     buttons->scanButtons();
     setCurrentSelection();
+    // Clear latch is closed
+    buttons->checkReleaseButton();
     lastButtonCheckTick = xTaskGetTickCount();
     if (!lights) lights = new XMAS::XmasLights(LED_COUNT);
     lights->startLights(CLOCK_PIN, DATA_PIN, SPI_CLOCK_SPEED_HZ, XMAS_SPI_HOST);
@@ -119,6 +121,10 @@ void Xmas::setCurrentSelection() {
     int64_t encoderIndex = _data.hal->encoder.getCount() / 2;
     // The extra modulo and addition handle negative values correctly
     uint8_t numberSensed = buttons->numberOfClosedLatches();
+        if (numberSensed == 0) {
+        currentSelection = 1;
+        return;
+    }
     encoderIndex = ((encoderIndex % numberSensed) + numberSensed) % numberSensed;
     currentSelection = buttons->getnthClosedLatch(encoderIndex) + 1;
 }
@@ -126,28 +132,10 @@ void Xmas::setCurrentSelection() {
 
 void Xmas::onRunningButtons() {
     LGFX_StampRing display = _data.hal->display;
-    bool encoderButtonPressed = false;
-    if (!_data.hal->encoder.btn.read())
-    {
-        for(int i = 0; i < 100; i++) {
-            if (!_data.hal->encoder.btn.read()) {
-                delay(5);
-            } else {
-                break;
-            }
-        } 
-        encoderButtonPressed = true;
-    }
-    uint32_t buttonState = 0;
-    if (USE_ENCODER_FOR_SELECTION) {
-        buttonState = encoderButtonPressed ? 0 : 1;
-        ret = ESP_OK;
-    } else {
-        ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &buttonState);
-    }
     
-    if (ret == ESP_OK && buttonState == 0)
-    { 
+    if (buttons->checkReleaseButton())
+    {
+        display.setBrightness(128);
         buttons->releaseLatch(currentSelection);
         XMAS::Utils::showAnimation(
             &XMASPIMAGE1, 
@@ -159,16 +147,8 @@ void Xmas::onRunningButtons() {
             0xFFFFFF
         );
         XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
-        // playSong(currentSong++);
-        // if (currentSong >= 13)
-        //     currentSong = 0;
-        XMAS::Utils::checkButton(&dev[0], MCP23017_PIN_BUTTON);
-    }
-
-    if (encoderButtonPressed) {
-        playSong(currentSong++);
-        if (currentSong >= 13)
-            currentSong = 0;
+        buttons->scanButtons();
+        setCurrentSelection();
     }
 
     if (_data.hal->encoder.wasMoved(true)) {
@@ -190,7 +170,7 @@ void Xmas::onRunningButtons() {
            display.setBrightness(0);
            _data.hal->encoder.wasMoved(true);
         } else {
-            
+            setCurrentSelection();
             lights->rainbowTimeCounter = 0;
             display.setBrightness(128);
             XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
@@ -199,6 +179,7 @@ void Xmas::onRunningButtons() {
 
     if ((lastButtonCheckTick - xTaskGetTickCount()) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
         buttons->scanButtons();
+        printf("number of closed latches: %u\n", buttons->numberOfClosedLatches());
         lastButtonCheckTick = xTaskGetTickCount();
     }
     
