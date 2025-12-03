@@ -1,4 +1,4 @@
-#include "xmas_utils.h"
+#include "xmas_ui.h"
 #include "../../common_define.h"
 
 #define XMAS_FONT_SCALE 7
@@ -10,29 +10,33 @@ namespace MOONCAKE
     {
         namespace XMAS
         {
-            void Utils::drawCenterString(HAL::HAL* hal, const char* string)
+            UI::UI(HAL::HAL* hal)
             {
-                
-                LGFX_Sprite* canvas = hal->canvas;
+                canvas = hal->canvas;
+                displayHeight = hal->display.height();
+                displayWidth = hal->display.width();
+            }
+            void UI::drawCenterString(const char* string)
+            {
                 canvas->clear();
                 // #000000 background
                 canvas->fillScreen(canvas->color565(0x00, 0x00, 0x00));
                 canvas->setTextSize(XMAS_FONT_SCALE);
                 canvas->setFont(&fonts::efontTomorrowNight10);
                 int textHeight = canvas->fontHeight();
-                int y = ((hal->display.height() - textHeight) / 2) - 5;
+                int y = ((displayHeight - textHeight) / 2) - 5;
                 // #525252 shadow
                 canvas->setTextColor(canvas->color565(0x52, 0x52, 0x52));
-                canvas->drawCenterString(string, (hal->display.width() / 2), y + 5);
+                canvas->drawCenterString(string, (displayWidth / 2), y + 5);
                 // #FFFDFE main text
                 canvas->setTextColor(canvas->color565(0xFF, 0xFD, 0xFE));
-                canvas->drawCenterString(string, (hal->display.width() / 2), y);
+                canvas->drawCenterString(string, (displayWidth / 2), y);
 
                 canvas->pushSprite(0, 0);
                 canvas->setTextSize(1);
             }
 
-            void Utils::drawImgFrame(const xmas_img_t* image, LGFX_Sprite* canvas, uint8_t frameToDraw, uint8_t x, uint8_t y, int backgroundColor, float scaleX, float scaleY)
+            void UI::drawImgFrame(const xmas_img_t* image, uint8_t frameToDraw, uint8_t x, uint8_t y, int backgroundColor, float scaleX, float scaleY)
             {
                 frameToDraw = frameToDraw % image->framecount;
                 int offX = frameToDraw * image->width;
@@ -42,14 +46,14 @@ namespace MOONCAKE
                 canvas->pushSprite(0, 0);
             }
 
-            void Utils::showAnimation(const xmas_img_t* image, LGFX_Sprite* canvas, uint8_t x, uint8_t y, uint8_t fps, int animationTimeMs, int backgroundColor, float scaleX, float scaleY) {
+            void UI::showAnimation(const xmas_img_t* image, uint8_t x, uint8_t y, uint8_t fps, int animationTimeMs, int backgroundColor, float scaleX, float scaleY) {
                 uint8_t totalFrames = image->framecount;
                 uint8_t frameDurationMs = 1000 / fps;
                 uint8_t totalAnimationFrames = animationTimeMs / frameDurationMs;
 
                 for (uint8_t frame = 0; frame < totalAnimationFrames; frame++) {
                     uint8_t currentFrame = frame % totalFrames;
-                    drawImgFrame(image, canvas, currentFrame, x, y, backgroundColor, scaleX, scaleY);
+                    drawImgFrame(image, currentFrame, x, y, backgroundColor, scaleX, scaleY);
                     delay(frameDurationMs);
                 }
             }

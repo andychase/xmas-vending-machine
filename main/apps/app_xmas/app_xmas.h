@@ -4,7 +4,7 @@
 #include "songs/songs.h"
 #include <led_strip_spi.h>
 #include "../../hal/arduino/Tone.h"
-#include "utils/xmas_utils.h"
+#include "utils/xmas_ui.h"
 #include "utils/xmas_lights.h"
 #include "utils/xmas_buttons.h"
 
@@ -32,6 +32,7 @@ namespace MOONCAKE
                 
                 class XMAS::XmasLights* lights = nullptr;
                 class XMAS::XmasButtons* buttons = nullptr;
+                class XMAS::UI* ui = nullptr;
             public:
                 XMAS::Data_t _data;
 

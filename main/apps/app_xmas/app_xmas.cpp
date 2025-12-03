@@ -76,7 +76,8 @@ void Xmas::onSetup()
 void Xmas::onCreate()
 {
     _log("onCreate");
-    XMAS::Utils::drawCenterString(_data.hal, "");
+    if (!ui) ui = new XMAS::UI(_data.hal);
+    ui->drawCenterString("");
     // Button logic moved to XmasButtons
     if (!buttons) buttons = new XMAS::XmasButtons();
     buttons->setupButtons(
@@ -137,16 +138,15 @@ void Xmas::onRunningButtons() {
     {
         display.setBrightness(128);
         buttons->releaseLatch(currentSelection);
-        XMAS::Utils::showAnimation(
+        ui->showAnimation(
             &XMASPIMAGE1, 
-            _data.hal->canvas,
             (display.width() / 2) - (XMASPIMAGE1.width/2), \
             (display.height() / 2) - (XMASPIMAGE1.height/2), 
             5,
             3000,
             0xFFFFFF
         );
-        XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
+        ui->drawCenterString(std::to_string(currentSelection).c_str());
         buttons->scanButtons();
         setCurrentSelection();
     }
@@ -156,16 +156,15 @@ void Xmas::onRunningButtons() {
         u_int8_t numberSensed = buttons->numberOfClosedLatches();
         if (numberSensed == 0) {
                 display.setBrightness(128);
-                XMAS::Utils::showAnimation(
-                &XMASPIMAGE2, 
-                _data.hal->canvas,
-                (_data.hal->display.width() / 2) - ((XMASPIMAGE2.width/2)*4),
-                (_data.hal->display.height() / 2) - ((XMASPIMAGE2.height/2)*4), 
-                20,
-                3000,
-                0x000000,
-                4.0f, 
-                4.0f
+                ui->showAnimation(
+                    &XMASPIMAGE2, 
+                    (_data.hal->display.width() / 2) - ((XMASPIMAGE2.width/2)*4),
+                    (_data.hal->display.height() / 2) - ((XMASPIMAGE2.height/2)*4), 
+                    20,
+                    3000,
+                    0x000000,
+                    4.0f, 
+                    4.0f
             );
            display.setBrightness(0);
            _data.hal->encoder.wasMoved(true);
@@ -173,7 +172,7 @@ void Xmas::onRunningButtons() {
             setCurrentSelection();
             lights->rainbowTimeCounter = 0;
             display.setBrightness(128);
-            XMAS::Utils::drawCenterString(_data.hal, std::to_string(currentSelection).c_str());
+            ui->drawCenterString(std::to_string(currentSelection).c_str());
         }
     }
 
