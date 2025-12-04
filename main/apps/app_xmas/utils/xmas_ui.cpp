@@ -7,6 +7,8 @@
 
 using tweeny::easing;
 
+const int8_t XOFFSETS[] = {-20, -10, 10, 20};
+
 static void ui_task_trampoline(void* pv)
 {
     auto* inst = static_cast<MOONCAKE::USER_APP::XMAS::UI*>(pv);
@@ -47,8 +49,9 @@ namespace MOONCAKE
             {
                 TickType_t animationStartTicks = xTaskGetTickCount();
                 tweeny::tween<int32_t> animation;
+                int32_t currentXPosition = displayWidth / 2;
                 while (true) {
-                    vTaskDelay(pdMS_TO_TICKS(17)); // 60ish FPS
+                    vTaskDelay(pdMS_TO_TICKS(7)); // 144ish FPS
                     if (cmdQueue) {
                         UICommand cmd;
                         while (xQueueReceive(cmdQueue, &cmd, 0) == pdTRUE) {
@@ -84,14 +87,15 @@ namespace MOONCAKE
                             encoder.wasMoved(true);
                         } else {
                             animationStartTicks = xTaskGetTickCount();
-                            animation = tweeny::from((int32_t) (displayWidth / 2) - 100).to((int32_t) (displayWidth / 2)).during(1000).via(easing::elasticOut);
+                            int32_t targetPosition = (displayWidth / 2) + XOFFSETS[(currentSelection - 1) % 4];
+                            animation = tweeny::from(currentXPosition).to(targetPosition).during(100).via(easing::elasticOut);
                             display.setBrightness(128);
                         }
                     }
                     if (!animation.isFinished()) {
-                        int offset = animation.step(timeElapsed(animationStartTicks));
+                        currentXPosition = animation.step(timeElapsed(animationStartTicks));
                         animationStartTicks = xTaskGetTickCount();
-                        drawCenterString(std::to_string(currentSelection).c_str(), offset);
+                        drawCenterString(std::to_string(currentSelection).c_str(), currentXPosition);
                     }
                 }
             }
