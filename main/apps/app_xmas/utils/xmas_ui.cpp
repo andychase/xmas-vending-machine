@@ -1,14 +1,21 @@
 #include "xmas_ui.h"
+#include "tweeny/tweeny.h"
 #include "../../common_define.h"
 
 #define XMAS_FONT_SCALE 7
 #define XMAS_FONT_SIZE 10
+
+using tweeny::easing;
 
 static void ui_task_trampoline(void* pv)
 {
     auto* inst = static_cast<MOONCAKE::USER_APP::XMAS::UI*>(pv);
     inst->run_task_loop();
     vTaskDelete(nullptr);
+}
+
+uint32_t timeElapsed(TickType_t startTicks) {
+    return (xTaskGetTickCount() - startTicks) * portTICK_PERIOD_MS;
 }
 
 namespace MOONCAKE
@@ -38,23 +45,25 @@ namespace MOONCAKE
             }
             void UI::run_task_loop()
             {
-                    while (true) {
-                        vTaskDelay(pdMS_TO_TICKS(17)); // 60ish FPS
-                        if (cmdQueue) {
-                            UICommand cmd;
-                            while (xQueueReceive(cmdQueue, &cmd, 0) == pdTRUE) {
-                                switch (cmd.command) {
-                                    case UI_BUTTON_PRESSED:
-                                        buttonPressed();
-                                        break;
-                                    case UPDATE_LATCH_STATE:
-                                        buttons.updateLatchState(cmd.latchIndex, cmd.latchIsClosed);
-                                        break;
-                                    default:
-                                        break;
-                                }
+                TickType_t animationStartTicks = xTaskGetTickCount();
+                tweeny::tween<int32_t> animation;
+                while (true) {
+                    vTaskDelay(pdMS_TO_TICKS(17)); // 60ish FPS
+                    if (cmdQueue) {
+                        UICommand cmd;
+                        while (xQueueReceive(cmdQueue, &cmd, 0) == pdTRUE) {
+                            switch (cmd.command) {
+                                case UI_BUTTON_PRESSED:
+                                    buttonPressed();
+                                    break;
+                                case UPDATE_LATCH_STATE:
+                                    buttons.updateLatchState(cmd.latchIndex, cmd.latchIsClosed);
+                                    break;
+                                default:
+                                    break;
                             }
                         }
+                    }
                     if (encoder.wasMoved(true)) {
                         // Get number of active sensedPinState pins
                         currentSelection = buttons.getCurrentSelection(encoder.getCount() / 2);
@@ -74,9 +83,15 @@ namespace MOONCAKE
                             display.setBrightness(0);
                             encoder.wasMoved(true);
                         } else {
+                            animationStartTicks = xTaskGetTickCount();
+                            animation = tweeny::from((int32_t) (displayWidth / 2) - 100).to((int32_t) (displayWidth / 2)).during(1000).via(easing::elasticOut);
                             display.setBrightness(128);
-                            drawCenterString(std::to_string(currentSelection).c_str());
                         }
+                    }
+                    if (!animation.isFinished()) {
+                        int offset = animation.step(timeElapsed(animationStartTicks));
+                        animationStartTicks = xTaskGetTickCount();
+                        drawCenterString(std::to_string(currentSelection).c_str(), offset);
                     }
                 }
             }
@@ -90,9 +105,9 @@ namespace MOONCAKE
                     3000,
                     0xFFFFFF
                 );
-                drawCenterString(std::to_string(currentSelection).c_str());
+                display.clear();
             }
-            void UI::drawCenterString(const char* string)
+            void UI::drawCenterString(const char* string, int32_t x)
             {
                 canvas->clear();
                 // #000000 background
@@ -103,11 +118,10 @@ namespace MOONCAKE
                 int y = ((displayHeight - textHeight) / 2) - 5;
                 // #525252 shadow
                 canvas->setTextColor(canvas->color565(0x52, 0x52, 0x52));
-                canvas->drawCenterString(string, (displayWidth / 2), y + 5);
+                canvas->drawCenterString(string, x, y + 5);
                 // #FFFDFE main text
                 canvas->setTextColor(canvas->color565(0xFF, 0xFD, 0xFE));
-                canvas->drawCenterString(string, (displayWidth / 2), y);
-
+                canvas->drawCenterString(string, x, y);
                 canvas->pushSprite(0, 0);
                 canvas->setTextSize(1);
             }

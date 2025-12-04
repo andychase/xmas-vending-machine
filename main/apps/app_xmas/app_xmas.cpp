@@ -78,7 +78,7 @@ void Xmas::onCreate()
 {
     _log("onCreate");
     if (!ui) ui = new XMAS::UI(_data.hal);
-    ui->drawCenterString("");
+    ui->drawCenterString("", 0);
     // Button logic moved to XmasButtons
     if (!buttons) buttons = new XMAS::XmasButtons();
     buttons->setupButtons(
