@@ -80,6 +80,14 @@ namespace MOONCAKE
                     gpio_compat_set_pullup(&dev[sel.address], sel.pin, true);
                 }
             }
+            void XmasButtons::updateLatchState(uint8_t index, bool isClosed)
+            {
+                if (index >= TOTAL_PINS)
+                {
+                    return;
+                }
+                sensedLatchClosed[index] = isClosed;
+            }
             void XmasButtons::scanButtons()
             {
                 esp_err_t ret;
@@ -91,7 +99,7 @@ namespace MOONCAKE
                     if (ret == ESP_OK)
                     {
                         // Closed latches are low (0)
-                        sensedLatchClosed[i] = (val == 0);
+                        updateLatchState(i, val == 0);
                     }
                 }
             }
@@ -102,6 +110,9 @@ namespace MOONCAKE
                     return false;
                 }
                 return sensedLatchClosed[index];
+            }
+            uint8_t XmasButtons::numberofLatches() {
+                return TOTAL_PINS;
             }
             uint8_t XmasButtons::numberOfClosedLatches()
             {
@@ -123,6 +134,16 @@ namespace MOONCAKE
                 }
                 return 0;
             }
+            uint8_t XmasButtons::getCurrentSelection(int64_t encoderIndex) {
+                // The extra modulo and addition handle negative values correctly
+                    uint8_t numberSensed = numberOfClosedLatches();
+                        if (numberSensed == 0) {
+                        return 1;
+                    }
+                    encoderIndex = ((encoderIndex % numberSensed) + numberSensed) % numberSensed;
+                    return getnthClosedLatch(encoderIndex) + 1;
+            }
+
             void XmasButtons::releaseLatch(int selection)
             {
                 PinSelection selectedPin = selectPin(selection - 1, ACTIVE_PINS);

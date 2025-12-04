@@ -9,6 +9,7 @@
 #include "utils/xmas_img.h"
 #include "utils/xmas_lights.h"
 #include "utils/xmas_buttons.h"
+#include "utils/xmas_ui.h"
 
 #define MCP23017_PIN_LED 8    // GPIO pin connected to the LED
 #define MCP23017_PIN_BUTTON 0 // GPIO pin connected to the button
@@ -94,7 +95,7 @@ void Xmas::onCreate()
     );
     delay(10);
     buttons->scanButtons();
-    setCurrentSelection();
+    currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
     // Clear latch is closed
     buttons->checkReleaseButton();
     lastButtonCheckTick = xTaskGetTickCount();
@@ -118,76 +119,27 @@ void Xmas::playSong(int songId) {
     _data.hal->buzz.noTone();
 }
 
-void Xmas::setCurrentSelection() {
-    int64_t encoderIndex = _data.hal->encoder.getCount() / 2;
-    // The extra modulo and addition handle negative values correctly
-    uint8_t numberSensed = buttons->numberOfClosedLatches();
-        if (numberSensed == 0) {
-        currentSelection = 1;
-        return;
+void Xmas::scanAndUpdateSelection() {
+    buttons->scanButtons();
+    for(uint8_t i = 0; i < buttons->numberofLatches(); i++) {
+        bool isClosed = buttons->checkLatchIsClosed(i);
+        ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UPDATE_LATCH_STATE, i, isClosed});
     }
-    encoderIndex = ((encoderIndex % numberSensed) + numberSensed) % numberSensed;
-    currentSelection = buttons->getnthClosedLatch(encoderIndex) + 1;
+    currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
 }
 
-
 void Xmas::onRunningButtons() {
-    LGFX_StampRing display = _data.hal->display;
-    
-    if (buttons->checkReleaseButton())
-    {
-        display.setBrightness(128);
+    if (buttons->checkReleaseButton()) {
+        scanAndUpdateSelection();
+        ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UI_BUTTON_PRESSED, 0, false});
         buttons->releaseLatch(currentSelection);
-        ui->showAnimation(
-            &XMASPIMAGE1, 
-            (display.width() / 2) - (XMASPIMAGE1.width/2), \
-            (display.height() / 2) - (XMASPIMAGE1.height/2), 
-            5,
-            3000,
-            0xFFFFFF
-        );
-        ui->drawCenterString(std::to_string(currentSelection).c_str());
-        buttons->scanButtons();
-        setCurrentSelection();
-    }
-
-    if (_data.hal->encoder.wasMoved(true)) {
-        // Get number of active sensedPinState pins
-        u_int8_t numberSensed = buttons->numberOfClosedLatches();
-        if (numberSensed == 0) {
-                display.setBrightness(128);
-                ui->showAnimation(
-                    &XMASPIMAGE2, 
-                    (_data.hal->display.width() / 2) - ((XMASPIMAGE2.width/2)*4),
-                    (_data.hal->display.height() / 2) - ((XMASPIMAGE2.height/2)*4), 
-                    20,
-                    3000,
-                    0x000000,
-                    4.0f, 
-                    4.0f
-            );
-           display.setBrightness(0);
-           _data.hal->encoder.wasMoved(true);
-        } else {
-            setCurrentSelection();
-            lights->rainbowTimeCounter = 0;
-            display.setBrightness(128);
-            ui->drawCenterString(std::to_string(currentSelection).c_str());
-        }
+        scanAndUpdateSelection();
     }
 
     if ((lastButtonCheckTick - xTaskGetTickCount()) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
-        buttons->scanButtons();
-        printf("number of closed latches: %u\n", buttons->numberOfClosedLatches());
+        scanAndUpdateSelection();
         lastButtonCheckTick = xTaskGetTickCount();
     }
-    
-    if (lights->rainbowTimeCounter < 500) {
-        lights->rainbowTimeCounter++;
-    } else {
-        display.setBrightness(0);
-    }
-
 }
 
 void Xmas::onRunning()

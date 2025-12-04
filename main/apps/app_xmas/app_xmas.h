@@ -25,14 +25,13 @@ namespace MOONCAKE
         {
             private:
                 const char* _tag = "XMAS";
-                uint8_t currentSong = 0;
-                unsigned int startCount = 0;
                 TickType_t lastButtonCheckTick = 0;
                 unsigned int currentSelection = 1;
                 
                 class XMAS::XmasLights* lights = nullptr;
                 class XMAS::XmasButtons* buttons = nullptr;
                 class XMAS::UI* ui = nullptr;
+                void scanAndUpdateSelection();
             public:
                 XMAS::Data_t _data;
 

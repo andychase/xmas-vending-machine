@@ -31,12 +31,16 @@ namespace XMAS {
             gpio_num_t SDA_GPIO,
             gpio_num_t SCL_GPIO
         );
+        void updateLatchState(uint8_t index, bool isClosed);
         void scanButtons();
         void releaseLatch(int selection);
         bool checkReleaseButton();
         bool checkLatchIsClosed(uint8_t index);
+        uint8_t numberofLatches();
         uint8_t numberOfClosedLatches();
         uint8_t getnthClosedLatch(uint8_t nthClosedIndex);
+        uint8_t getCurrentSelection(int64_t encoderIndex);
+
     private:
         mcp23x17_t* dev;
         const uint8_t (*ACTIVE_PINS)[4];
