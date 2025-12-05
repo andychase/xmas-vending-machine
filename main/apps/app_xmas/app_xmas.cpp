@@ -48,7 +48,7 @@ static const uint8_t READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}
 #endif
 
 // Info about lights
-#define SPI_CLOCK_SPEED_HZ 400'000
+#define SPI_CLOCK_SPEED_HZ 1'000'000
 #ifdef CONFIG_USING_SIMULATOR
 #define XMAS_SPI_HOST SPI3_HOST
 #define LED_COUNT 15 // Number of LEDs in the strip
