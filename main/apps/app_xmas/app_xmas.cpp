@@ -78,7 +78,7 @@ void Xmas::onCreate()
 {
     _log("onCreate");
     if (!ui) ui = new XMAS::UI(_data.hal);
-    ui->drawCenterString("", 0);
+    ui->drawCenterString("", 0, 0);
     // Button logic moved to XmasButtons
     if (!buttons) buttons = new XMAS::XmasButtons();
     buttons->setupButtons(
@@ -150,7 +150,7 @@ void Xmas::onRunning()
     // startDelayPassed because tick count can overflow
     if (startDelayPassed || xTaskGetTickCount() - startTick > pdMS_TO_TICKS(500)) {
         startDelayPassed = true;
-    onRunningButtons();
+        onRunningButtons();
     }
     
     delay(1);

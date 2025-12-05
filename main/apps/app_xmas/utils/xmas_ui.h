@@ -28,7 +28,7 @@ namespace MOONCAKE
                     void sendCommand(UICommand cmd);
                     void run_task_loop();
                     void buttonPressed();
-                    void drawCenterString(const char* string,  int32_t x);
+                    void drawCenterString(const char* string, int32_t x, int32_t yOffset);
                     void drawImgFrame(const xmas_img_t* image,
                                       uint8_t frameToDraw,
                                       uint8_t x,
