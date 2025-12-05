@@ -25,7 +25,9 @@ namespace MOONCAKE
         {
             private:
                 const char* _tag = "XMAS";
-                TickType_t lastButtonCheckTick = 0;
+                TickType_t lastLatchScanTick = 0;
+                TickType_t startTick = 0;
+                bool startDelayPassed = false;
                 unsigned int currentSelection = 1;
                 
                 class XMAS::XmasLights* lights = nullptr;

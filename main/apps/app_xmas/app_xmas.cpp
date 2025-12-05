@@ -95,10 +95,11 @@ void Xmas::onCreate()
     );
     delay(10);
     buttons->scanButtons();
+    startTick = xTaskGetTickCount();
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
     // Clear latch is closed
     buttons->checkReleaseButton();
-    lastButtonCheckTick = xTaskGetTickCount();
+    lastLatchScanTick = xTaskGetTickCount();
     if (!lights) lights = new XMAS::XmasLights(LED_COUNT);
     lights->startLights(CLOCK_PIN, DATA_PIN, SPI_CLOCK_SPEED_HZ, XMAS_SPI_HOST);
 }
@@ -136,16 +137,22 @@ void Xmas::onRunningButtons() {
         scanAndUpdateSelection();
     }
 
-    if ((lastButtonCheckTick - xTaskGetTickCount()) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
+    if ((lastLatchScanTick - xTaskGetTickCount()) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
         scanAndUpdateSelection();
-        lastButtonCheckTick = xTaskGetTickCount();
+        lastLatchScanTick = xTaskGetTickCount();
     }
 }
 
 void Xmas::onRunning()
 {
     lights->onRunningLights(currentSelection);
+    // Give some time to equalize before checking button
+    // startDelayPassed because tick count can overflow
+    if (startDelayPassed || xTaskGetTickCount() - startTick > pdMS_TO_TICKS(500)) {
+        startDelayPassed = true;
     onRunningButtons();
+    }
+    
     delay(1);
 }
 
