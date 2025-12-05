@@ -1,6 +1,7 @@
 #pragma once
 #include "../../../hal/hal.h"
 #include <mcp23x17.h>
+#include <color.h>
 #include "xmas_img.h"
 #include "xmas_buttons.h"
 
@@ -28,6 +29,7 @@ namespace MOONCAKE
                     void sendCommand(UICommand cmd);
                     void run_task_loop();
                     void buttonPressed();
+                    void drawCenterString(const char* string, int32_t x, int32_t yOffset, rgb_t color);
                     void drawCenterString(const char* string, int32_t x, int32_t yOffset);
                     void drawImgFrame(const xmas_img_t* image,
                                       uint8_t frameToDraw,

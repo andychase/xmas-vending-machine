@@ -50,9 +50,11 @@ namespace MOONCAKE
                 TickType_t animationStartTicks = xTaskGetTickCount();
                 tweeny::tween<int32_t> animationX;
                 tweeny::tween<int32_t> animationY;
+                tweeny::tween<uint8_t> animationBkg = tweeny::from((uint8_t)0).to((uint8_t)0).during(100);
                 int32_t currentXPosition = displayWidth / 2;
                 int32_t yOffset = 0;
                 uint8_t lastShelf = (currentSelection - 1) / 4;
+                uint8_t currentShelf = (currentSelection - 1) / 4;
                 while (true) {
                     vTaskDelay(pdMS_TO_TICKS(7)); // 144ish FPS
                     if (cmdQueue) {
@@ -92,10 +94,12 @@ namespace MOONCAKE
                             animationStartTicks = xTaskGetTickCount();
                             int32_t targetPosition = (displayWidth / 2) + XOFFSETS[(currentSelection - 1) % 4];
                             animationX = tweeny::from(currentXPosition).to(targetPosition).during(100).via(easing::elasticOut);
-                            uint8_t currentShelf = (currentSelection - 1) / 4;
+                            currentShelf = (currentSelection - 1) / 4;
                             if (currentShelf != lastShelf) {
                                 int8_t direction = (currentShelf > lastShelf) ? 1 : -1;
                                 animationY = tweeny::from((int32_t)20 * direction).to(0).during(100).via(easing::cubicInOut);
+                                uint8_t bkgStart = animationBkg.peek();
+                                animationBkg = tweeny::from(bkgStart).to((uint8_t)(20 * currentShelf)).during(100).via(easing::cubicInOut);
                                 lastShelf = currentShelf;
                             }
                             display.setBrightness(128);
@@ -103,11 +107,14 @@ namespace MOONCAKE
                     }
                     if (!animationX.isFinished()) {
                         currentXPosition = animationX.step(timeElapsed(animationStartTicks));
-                        if (!animationY.isFinished()) {
+                        if (!animationY.isFinished())
                             yOffset = animationY.step(timeElapsed(animationStartTicks));
-                        }
+                        uint8_t bkgValue = animationBkg.peek();
+                        if (!animationBkg.isFinished())
+                            bkgValue = animationBkg.step(timeElapsed(animationStartTicks));
                         animationStartTicks = xTaskGetTickCount();
-                        drawCenterString(std::to_string(currentSelection).c_str(), currentXPosition, yOffset);
+                        rgb_t backgroundColor  = hsv2rgb_raw({.h = 0, .s = 0, .v = bkgValue});
+                        drawCenterString(std::to_string(currentSelection).c_str(), currentXPosition, yOffset, backgroundColor);
                     }
                 }
             }
@@ -125,9 +132,13 @@ namespace MOONCAKE
             }
             void UI::drawCenterString(const char* string, int32_t x, int32_t yOffset)
             {
+                UI::drawCenterString(string, x, yOffset, {.r = 0x00, .g = 0x00, .b = 0x00});
+            }
+            void UI::drawCenterString(const char* string, int32_t x, int32_t yOffset, rgb_t color)
+            {
                 canvas->clear();
-                // #000000 background
-                canvas->fillScreen(canvas->color565(0x00, 0x00, 0x00));
+                // background
+                canvas->fillScreen(canvas->color565(color.r, color.g, color.b));
                 canvas->setTextSize(XMAS_FONT_SCALE);
                 canvas->setFont(&fonts::efontTomorrowNight10);
                 int textHeight = canvas->fontHeight();
