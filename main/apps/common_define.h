@@ -21,3 +21,4 @@
 #define _log_block() _log("free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL))
 
 #define _canvas_update() _data.hal->canvas->pushSprite(0, 0)
+#define _time_since_ms(tick) ((uint32_t)((xTaskGetTickCount() - (tick)) * (uint32_t) portTICK_PERIOD_MS))

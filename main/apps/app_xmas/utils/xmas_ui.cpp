@@ -16,9 +16,6 @@ static void ui_task_trampoline(void* pv)
     vTaskDelete(nullptr);
 }
 
-uint32_t timeElapsed(TickType_t startTicks) {
-    return (xTaskGetTickCount() - startTicks) * portTICK_PERIOD_MS;
-}
 
 namespace MOONCAKE
 {
@@ -106,12 +103,12 @@ namespace MOONCAKE
                         }
                     }
                     if (!animationX.isFinished()) {
-                        currentXPosition = animationX.step(timeElapsed(animationStartTicks));
+                        currentXPosition = animationX.step(_time_since_ms(animationStartTicks));
                         if (!animationY.isFinished())
-                            yOffset = animationY.step(timeElapsed(animationStartTicks));
+                            yOffset = animationY.step(_time_since_ms(animationStartTicks));
                         uint8_t bkgValue = animationBkg.peek();
                         if (!animationBkg.isFinished())
-                            bkgValue = animationBkg.step(timeElapsed(animationStartTicks));
+                            bkgValue = animationBkg.step(_time_since_ms(animationStartTicks));
                         animationStartTicks = xTaskGetTickCount();
                         rgb_t backgroundColor  = hsv2rgb_raw({.h = 0, .s = 0, .v = bkgValue});
                         drawCenterString(std::to_string(currentSelection).c_str(), currentXPosition, yOffset, backgroundColor);

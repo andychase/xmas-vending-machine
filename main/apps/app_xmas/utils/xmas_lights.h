@@ -14,18 +14,18 @@ namespace MOONCAKE
         {
             struct LEDSectionStruct
             {
-                int startA;
-                int endA;
-                int startB;
-                int endB;
+                uint16_t startA;
+                uint16_t endA;
+                uint16_t startB;
+                uint16_t endB;
             };
 
             struct LEDSectionsAnimationStruct
             {
-                tweeny::tween<int> startA;
-                tweeny::tween<int> endA;
-                tweeny::tween<int> startB;
-                tweeny::tween<int> endB;
+                tweeny::tween<uint16_t> startA;
+                tweeny::tween<uint16_t> endA;
+                tweeny::tween<uint16_t> startB;
+                tweeny::tween<uint16_t> endB;
             };
 
             class XmasLights
@@ -34,13 +34,18 @@ namespace MOONCAKE
                 XmasLights(uint16_t ledCount);
                 void startLights(uint8_t clockPin, uint8_t dataPin, uint64_t spiClockSpeedHz, spi_host_device_t hostDevice);
                 void onRunningLights(int currentSelection);
+                void clearEdgeLights();
+                void clearLights();
+                void colorRainbow();
+                void blankSectionEdges(LEDSectionStruct& ledSectionStruct, uint8_t edgeSize);
                 rgb_t color_wheel(uint8_t pos, float gamma);
                 LEDSectionStruct calculateSections(int section, int sectionSize);
-                uint16_t rainbowTimeCounter = 0;
                 LEDSectionsAnimationStruct animationSections;
                 bool neverAnimated = true;
                 int lastSelection = 1;
                 TickType_t lastTick = 0;
+                TickType_t idleTickCounter = 0;
+                tweeny::tween<uint8_t> idleTween;
             private:
                 int hue = 0;
                 uint16_t ledCount = 0;

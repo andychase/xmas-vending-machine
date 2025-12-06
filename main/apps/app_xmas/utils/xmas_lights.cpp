@@ -11,8 +11,6 @@ namespace MOONCAKE
 
             XmasLights::XmasLights(uint16_t ledCount)
             {
-                hue = 0;
-                rainbowTimeCounter = 0;
                 this->ledCount = ledCount;
             }
 
@@ -77,22 +75,7 @@ namespace MOONCAKE
                 result.endA = ((section % 4) + 1) * sectionSize + (sectionSize * 8 * std::floor(section / 4));
                 result.startB =
                     (sectionSize * 8) - ((section % 4 + 1) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
-                result.endB = (sectionSize * 8) - ((section % 4) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));
-
-                // int totalSections = std::max(ledCount / std::max(sectionSize, 1), 1);
-                // int base = sectionSize * totalSections * std::floor(section / totalSections);
-
-                // int startA = (section % totalSections) * sectionSize + base;
-                // int endA = startA + sectionSize - 1;
-                // int startB = (sectionSize * totalSections) - ((section % totalSections + 1) * sectionSize) + base;
-                // int endB = startB + sectionSize - 1;
-
-                // // Clamp to ledCount
-                // result.startA = std::max(0, std::min(startA, (int)ledCount - 1));
-                // result.endA   = std::max(0, std::min(endA,   (int)ledCount - 1));
-                // result.startB = std::max(0, std::min(startB, (int)ledCount - 1));
-                // result.endB   = std::max(0, std::min(endB,   (int)ledCount - 1));
-                
+                result.endB = (sectionSize * 8) - ((section % 4) * sectionSize) + (sectionSize * 8 * std::floor(section / 4));                
                 return result;
             }
 
@@ -101,6 +84,8 @@ namespace MOONCAKE
                 if (lastSelection != currentSelection)
                 {
                     lastTick = xTaskGetTickCount();
+                    idleTickCounter = lastTick;
+                    idleTween = tweeny::from((uint8_t) 255).to(255).during(5000).to(0).during(5000).via(tweeny::easing::quarticIn);
                     LEDSectionStruct target = {
                         calculateSections(currentSelection - 1, 18).startA,
                         calculateSections(currentSelection - 1, 18).endA,
@@ -117,63 +102,44 @@ namespace MOONCAKE
                     lastSelection = currentSelection;
                 }
                 if (!animationSections.startA.isFinished()) {
-                    uint32_t timeElapsed = (xTaskGetTickCount() - lastTick) * portTICK_PERIOD_MS;
+                    uint32_t timeElapsed = _time_since_ms(lastTick);
                     animationSections.startA.step(timeElapsed);
                     animationSections.endA.step(timeElapsed);
                     animationSections.startB.step(timeElapsed);
                     animationSections.endB.step(timeElapsed);
-                    lastTick = xTaskGetTickCount();
                 }
-                for (int i = 0; i < this->ledCount; i++)
+                uint8_t brightness = 0;
+                if (!idleTween.isFinished()) {
+                    brightness = idleTween.step(_time_since_ms(lastTick));
+                }
+                lastTick = xTaskGetTickCount();
+                // Rainbow code
+                //colorRainbow();
+                rgb_t color = {brightness, brightness, brightness};
+                clearLights();
+                LEDSectionStruct ledSectionStruct = {
+                    animationSections.startA.peek(),
+                    animationSections.endA.peek(),
+                    animationSections.startB.peek(),
+                    animationSections.endB.peek()
+                };
+                for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++)
                 {
-                    rgb_t color = color_wheel((hue + (i * 256 / this->ledCount)) & 255, 1);
-                    color.b *= 0.5;
-                    color.g *= 0.5;
-                    color.r *= 0.5;
                     led_strip_spi_set_pixel(&led_strip, i, color);
                 }
-                hue++;
-                
-                if (rainbowTimeCounter < 500)
+                for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++)
                 {
-                    for (int i = 0; i < this->ledCount; i++)
-                    {
-                        led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
-                    }
-                    LEDSectionStruct ledSectionStruct = {
-                        animationSections.startA.peek(),
-                        animationSections.endA.peek(),
-                        animationSections.startB.peek(),
-                        animationSections.endB.peek()
-                    };
-                    for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++)
-                    {
-                        led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
-                    }
-                    for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++)
-                    {
-                        led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
-                    }
-                    for (int i = 0; i < 4; i++)
-                    {
-                        if ((ledSectionStruct.startA + i) < this->ledCount)
-                        {
-                            led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startA + i, {0, 0, 0});
-                        }
-                        if ((ledSectionStruct.endA - i) < this->ledCount)
-                        {
-                            led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endA - i, {0, 0, 0});
-                        }
-                        if ((ledSectionStruct.startB + i) < this->ledCount)
-                        {
-                            led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startB + i, {0, 0, 0});
-                        }
-                        if ((ledSectionStruct.endB - i) < this->ledCount)
-                        {
-                            led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endB - i, {0, 0, 0});
-                        }
-                    }
+                    led_strip_spi_set_pixel(&led_strip, i, color);
                 }
+                blankSectionEdges(ledSectionStruct, 4);
+
+                clearEdgeLights();
+                led_strip_spi_flush(&led_strip);
+        }
+
+            void XmasLights::clearEdgeLights()
+            {
+                // Clears the edge lights under the staples
                 for (int base = 0; base < this->ledCount; base += 144)
                 {
                     if (base < this->ledCount)
@@ -193,7 +159,50 @@ namespace MOONCAKE
                         led_strip_spi_set_pixel(&led_strip, base + 143, {0, 0, 0});
                     }
                 }
-                led_strip_spi_flush(&led_strip);
+            }
+
+            void XmasLights::clearLights()
+            {
+                for (int i = 0; i < this->ledCount; i++)
+                {
+                    led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
+                }
+            }
+
+            void XmasLights::colorRainbow()
+            {
+                for (int i = 0; i < this->ledCount; i++)
+                {
+                    rgb_t color = color_wheel((hue + (i * 256 / this->ledCount)) & 255, 1);
+                    color.b *= 0.5;
+                    color.g *= 0.5;
+                    color.r *= 0.5;
+                    led_strip_spi_set_pixel(&led_strip, i, color);
+                }
+                hue++;
+            }
+
+            void XmasLights::blankSectionEdges(MOONCAKE::USER_APP::XMAS::LEDSectionStruct& ledSectionStruct, uint8_t edgeSize)
+            {
+                for (int i = 0; i < edgeSize; i++)
+                {
+                    if ((ledSectionStruct.startA + i) < this->ledCount)
+                    {
+                        led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startA + i, {0, 0, 0});
+                    }
+                    if ((ledSectionStruct.endA - i) < this->ledCount)
+                    {
+                        led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endA - i, {0, 0, 0});
+                    }
+                    if ((ledSectionStruct.startB + i) < this->ledCount)
+                    {
+                        led_strip_spi_set_pixel(&led_strip, ledSectionStruct.startB + i, {0, 0, 0});
+                    }
+                    if ((ledSectionStruct.endB - i) < this->ledCount)
+                    {
+                        led_strip_spi_set_pixel(&led_strip, ledSectionStruct.endB - i, {0, 0, 0});
+                    }
+                }
             }
 
         } // namespace XMAS
