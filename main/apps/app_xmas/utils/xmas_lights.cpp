@@ -132,6 +132,10 @@ namespace MOONCAKE
                     led_strip_spi_set_pixel(&led_strip, i, color);
                 }
                 blankSectionEdges(ledSectionStruct, 4);
+                if (_time_since_ms(idleTickCounter) > 10'000) {
+                    clearLights();
+                    colorShelvesLights(5);
+                }
 
                 clearEdgeLights();
                 led_strip_spi_flush(&led_strip);
@@ -178,6 +182,26 @@ namespace MOONCAKE
                     color.g *= 0.5;
                     color.r *= 0.5;
                     led_strip_spi_set_pixel(&led_strip, i, color);
+                }
+                hue++;
+            }
+
+            void XmasLights::colorShelvesLights(uint8_t brightness)
+            {
+                constexpr uint8_t palSize = 5;
+                const rgb_t palette_rgb[palSize] = {
+                    {0, 255, 0},     // Green
+                    {255, 0, 0},     // Red
+                    {255, 255, 0},   // Yellow
+                    {0, 0, 255},     // Blue
+                    {255, 165, 0}    // Orange
+                };
+
+                for (int i = 0; i < this->ledCount; ++i)
+                {
+                    uint8_t index = std::min((uint8_t)254, (uint8_t)(((hue / 10) + (i * 256 / this->ledCount)) & 0xFF));
+                    rgb_t color = color_from_palette_rgb(palette_rgb, palSize, index, brightness, true);
+                    led_strip_spi_set_pixel_brightness(&led_strip, i, color, 20);
                 }
                 hue++;
             }

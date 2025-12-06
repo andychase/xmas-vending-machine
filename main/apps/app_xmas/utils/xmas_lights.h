@@ -3,6 +3,7 @@
 #include "../../common_define.h"
 #include <cstdint>
 #include <cmath>
+#include <color.h>
 #include <led_strip_spi.h>
 #include "tweeny/tweeny.h"
 
@@ -37,6 +38,7 @@ namespace MOONCAKE
                 void clearEdgeLights();
                 void clearLights();
                 void colorRainbow();
+                void colorShelvesLights(uint8_t brightness);
                 void blankSectionEdges(LEDSectionStruct& ledSectionStruct, uint8_t edgeSize);
                 rgb_t color_wheel(uint8_t pos, float gamma);
                 LEDSectionStruct calculateSections(int section, int sectionSize);
@@ -47,7 +49,7 @@ namespace MOONCAKE
                 TickType_t idleTickCounter = 0;
                 tweeny::tween<uint8_t> idleTween;
             private:
-                int hue = 0;
+                uint16_t hue = 0;
                 uint16_t ledCount = 0;
                 
                 led_strip_spi_t led_strip;
