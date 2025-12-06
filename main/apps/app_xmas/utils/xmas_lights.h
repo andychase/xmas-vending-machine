@@ -1,8 +1,10 @@
 #pragma once
+#include "../../../hal/hal.h"
 #include "../../common_define.h"
 #include <cstdint>
 #include <cmath>
 #include <led_strip_spi.h>
+#include "tweeny/tweeny.h"
 
 namespace MOONCAKE
 {
@@ -18,6 +20,14 @@ namespace MOONCAKE
                 int endB;
             };
 
+            struct LEDSectionsAnimationStruct
+            {
+                tweeny::tween<int> startA;
+                tweeny::tween<int> endA;
+                tweeny::tween<int> startB;
+                tweeny::tween<int> endB;
+            };
+
             class XmasLights
             {
             public:
@@ -27,7 +37,10 @@ namespace MOONCAKE
                 rgb_t color_wheel(uint8_t pos, float gamma);
                 LEDSectionStruct calculateSections(int section, int sectionSize);
                 uint16_t rainbowTimeCounter = 0;
-
+                LEDSectionsAnimationStruct animationSections;
+                bool neverAnimated = true;
+                int lastSelection = 1;
+                TickType_t lastTick = 0;
             private:
                 int hue = 0;
                 uint16_t ledCount = 0;

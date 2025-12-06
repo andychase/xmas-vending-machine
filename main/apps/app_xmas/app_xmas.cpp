@@ -137,7 +137,7 @@ void Xmas::onRunningButtons() {
         scanAndUpdateSelection();
     }
 
-    if ((lastLatchScanTick - xTaskGetTickCount()) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
+    if ((xTaskGetTickCount() - lastLatchScanTick) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
         scanAndUpdateSelection();
         lastLatchScanTick = xTaskGetTickCount();
     }
@@ -145,6 +145,7 @@ void Xmas::onRunningButtons() {
 
 void Xmas::onRunning()
 {
+    currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
     lights->onRunningLights(currentSelection);
     // Give some time to equalize before checking button
     // startDelayPassed because tick count can overflow

@@ -98,6 +98,32 @@ namespace MOONCAKE
 
             void XmasLights::onRunningLights(int currentSelection)
             {
+                if (lastSelection != currentSelection)
+                {
+                    lastTick = xTaskGetTickCount();
+                    LEDSectionStruct target = {
+                        calculateSections(currentSelection - 1, 18).startA,
+                        calculateSections(currentSelection - 1, 18).endA,
+                        calculateSections(currentSelection - 1, 18).startB,
+                        calculateSections(currentSelection - 1, 18).endB
+                    };
+                    animationSections = {
+                        tweeny::from(neverAnimated ? target.startA : animationSections.startA.peek()).to(target.startA).during(50).via(tweeny::easing::linear),
+                        tweeny::from(neverAnimated ? target.endA : animationSections.endA.peek()).to(target.endA).during(50).via(tweeny::easing::linear),
+                        tweeny::from(neverAnimated ? target.startB : animationSections.startB.peek()).to(target.startB).during(50).via(tweeny::easing::linear),
+                        tweeny::from(neverAnimated ? target.endB : animationSections.endB.peek()).to(target.endB).during(50).via(tweeny::easing::linear)
+                    };
+                    neverAnimated = false;
+                    lastSelection = currentSelection;
+                }
+                if (!animationSections.startA.isFinished()) {
+                    uint32_t timeElapsed = (xTaskGetTickCount() - lastTick) * portTICK_PERIOD_MS;
+                    animationSections.startA.step(timeElapsed);
+                    animationSections.endA.step(timeElapsed);
+                    animationSections.startB.step(timeElapsed);
+                    animationSections.endB.step(timeElapsed);
+                    lastTick = xTaskGetTickCount();
+                }
                 for (int i = 0; i < this->ledCount; i++)
                 {
                     rgb_t color = color_wheel((hue + (i * 256 / this->ledCount)) & 255, 1);
@@ -114,7 +140,12 @@ namespace MOONCAKE
                     {
                         led_strip_spi_set_pixel(&led_strip, i, {0, 0, 0});
                     }
-                    LEDSectionStruct ledSectionStruct = calculateSections(currentSelection - 1, 18);
+                    LEDSectionStruct ledSectionStruct = {
+                        animationSections.startA.peek(),
+                        animationSections.endA.peek(),
+                        animationSections.startB.peek(),
+                        animationSections.endB.peek()
+                    };
                     for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++)
                     {
                         led_strip_spi_set_pixel(&led_strip, i, {100, 100, 100});
