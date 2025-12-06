@@ -40,6 +40,7 @@ namespace XMAS {
         uint8_t numberOfClosedLatches();
         uint8_t getnthClosedLatch(uint8_t nthClosedIndex);
         uint8_t getCurrentSelection(int64_t encoderIndex);
+        bool buttonDown = false;
 
     private:
         mcp23x17_t* dev;

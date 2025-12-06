@@ -95,10 +95,9 @@ void Xmas::onCreate()
     );
     delay(10);
     buttons->scanButtons();
-    startTick = xTaskGetTickCount();
+    buttonCheckCooldownTick = xTaskGetTickCount();
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
     // Clear latch is closed
-    buttons->checkReleaseButton();
     lastLatchScanTick = xTaskGetTickCount();
     if (!lights) lights = new XMAS::XmasLights(LED_COUNT);
     lights->startLights(CLOCK_PIN, DATA_PIN, SPI_CLOCK_SPEED_HZ, XMAS_SPI_HOST);
@@ -130,29 +129,46 @@ void Xmas::scanAndUpdateSelection() {
 }
 
 void Xmas::onRunningButtons() {
-    if (buttons->checkReleaseButton()) {
+    // It's a little confusing but basically:
+    // 1. Don't check button until a cooldown on startup and after the last button press
+    // 2. If the button is pressed, don't do anything until the next loop. This gives the lights effect time to fire.
+    // 3. Once the button is released, reset the cooldown timer.
+    if (releasingButtonNextLoop) {
         scanAndUpdateSelection();
         ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UI_BUTTON_PRESSED, 0, false});
         buttons->releaseLatch(currentSelection);
         scanAndUpdateSelection();
+        releasingButtonNextLoop = false;
     }
 
-    if ((xTaskGetTickCount() - lastLatchScanTick) > pdMS_TO_TICKS(SCAN_BUTTONS_MS)) {
+    bool cooldownPassed = (startDelayPassed || _time_since_ms(buttonCheckCooldownTick) > 500);
+    if (buttons->checkReleaseButton()) {
+        if (cooldownPassed && !buttons->buttonDown) {
+            releasingButtonNextLoop = true;
+            buttons->buttonDown = true;
+        }
+    } else if (buttons->buttonDown) {
+        buttons->buttonDown = false;
+        startDelayPassed = false;
+        buttonCheckCooldownTick = xTaskGetTickCount();
+        lastLatchScanTick = buttonCheckCooldownTick;
+    }
+
+
+    if (_time_since_ms(lastLatchScanTick) > SCAN_BUTTONS_MS) {
         scanAndUpdateSelection();
         lastLatchScanTick = xTaskGetTickCount();
+        startDelayPassed = true;
     }
 }
 
 void Xmas::onRunning()
 {
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
-    lights->onRunningLights(currentSelection);
+    lights->onRunningLights(currentSelection, releasingButtonNextLoop);
     // Give some time to equalize before checking button
     // startDelayPassed because tick count can overflow
-    if (startDelayPassed || xTaskGetTickCount() - startTick > pdMS_TO_TICKS(500)) {
-        startDelayPassed = true;
-        onRunningButtons();
-    }
+    onRunningButtons();
     
     delay(1);
 }

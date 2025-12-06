@@ -79,7 +79,7 @@ namespace MOONCAKE
                 return result;
             }
 
-            void XmasLights::onRunningLights(int currentSelection)
+            void XmasLights::onRunningLights(int currentSelection, bool releasingButtonNextLoop)
             {
                 if (lastSelection != currentSelection)
                 {
@@ -108,35 +108,42 @@ namespace MOONCAKE
                     animationSections.startB.step(timeElapsed);
                     animationSections.endB.step(timeElapsed);
                 }
-                uint8_t brightness = 0;
-                if (!idleTween.isFinished()) {
-                    brightness = idleTween.step(_time_since_ms(lastTick));
+                if (releasingButtonNextLoop) {
+                    buttonReleaseTween = tweeny::from((uint8_t) 255).to(0).during(1000).via(tweeny::easing::circularOut);
+                    if (!idleTween.isFinished()) {
+                        idleTween.seek(1.0f);
+                    }
                 }
-                lastTick = xTaskGetTickCount();
-                // Rainbow code
-                //colorRainbow();
-                rgb_t color = {brightness, brightness, brightness};
-                clearLights();
-                LEDSectionStruct ledSectionStruct = {
-                    animationSections.startA.peek(),
-                    animationSections.endA.peek(),
-                    animationSections.startB.peek(),
-                    animationSections.endB.peek()
-                };
-                for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++)
-                {
-                    led_strip_spi_set_pixel(&led_strip, i, color);
+                
+                if (!buttonReleaseTween.isFinished()) {
+                    clearLights();
+                    lightsBrightness(buttonReleaseTween.step(_time_since_ms(lastTick)));
                 }
-                for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++)
-                {
-                    led_strip_spi_set_pixel(&led_strip, i, color);
-                }
-                blankSectionEdges(ledSectionStruct, 4);
-                if (_time_since_ms(idleTickCounter) > 10'000) {
+                else if (idleTween.isFinished()) {
                     clearLights();
                     colorShelvesLights(5);
+                } else {
+                    uint8_t brightness = idleTween.step(_time_since_ms(lastTick));
+                    rgb_t color = {brightness, brightness, brightness};
+                    clearLights();
+                    LEDSectionStruct ledSectionStruct = {
+                        animationSections.startA.peek(),
+                        animationSections.endA.peek(),
+                        animationSections.startB.peek(),
+                        animationSections.endB.peek()
+                    };
+                    for (size_t i = ledSectionStruct.startA; i <= ledSectionStruct.endA; i++)
+                    {
+                        led_strip_spi_set_pixel(&led_strip, i, color);
+                    }
+                    for (size_t i = ledSectionStruct.startB; i <= ledSectionStruct.endB; i++)
+                    {
+                        led_strip_spi_set_pixel(&led_strip, i, color);
+                    }
+                    blankSectionEdges(ledSectionStruct, 4);
                 }
-
+                
+                lastTick = xTaskGetTickCount();
                 clearEdgeLights();
                 led_strip_spi_flush(&led_strip);
         }
@@ -162,6 +169,14 @@ namespace MOONCAKE
                     {
                         led_strip_spi_set_pixel(&led_strip, base + 143, {0, 0, 0});
                     }
+                }
+            }
+
+            void XmasLights::lightsBrightness(uint8_t brightness)
+            {
+                for (int i = 0; i < this->ledCount; i++)
+                {
+                    led_strip_spi_set_pixel_brightness(&led_strip, i, {brightness, brightness, brightness}, brightness);
                 }
             }
 

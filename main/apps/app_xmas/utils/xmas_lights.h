@@ -34,8 +34,9 @@ namespace MOONCAKE
             public:
                 XmasLights(uint16_t ledCount);
                 void startLights(uint8_t clockPin, uint8_t dataPin, uint64_t spiClockSpeedHz, spi_host_device_t hostDevice);
-                void onRunningLights(int currentSelection);
+                void onRunningLights(int currentSelection, bool releasingButtonNextLoop);
                 void clearEdgeLights();
+                void lightsBrightness(uint8_t brightness);
                 void clearLights();
                 void colorRainbow();
                 void colorShelvesLights(uint8_t brightness);
@@ -48,6 +49,7 @@ namespace MOONCAKE
                 TickType_t lastTick = 0;
                 TickType_t idleTickCounter = 0;
                 tweeny::tween<uint8_t> idleTween;
+                tweeny::tween<uint8_t> buttonReleaseTween;
             private:
                 uint16_t hue = 0;
                 uint16_t ledCount = 0;
