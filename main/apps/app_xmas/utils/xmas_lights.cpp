@@ -85,7 +85,14 @@ namespace MOONCAKE
                 {
                     lastTick = xTaskGetTickCount();
                     idleTickCounter = lastTick;
-                    idleTween = tweeny::from((uint8_t) 255).to(255).during(5000).to(0).during(5000).via(tweeny::easing::quarticIn);
+                    idleTween = (
+                        tweeny::from((uint8_t) 255)
+                        .to(255).during(5000)
+                        .to(0).during(5000).via(tweeny::easing::quarticIn)
+                        .to(0).during(1000)
+                        .to(7).during(1)
+                        .to(20).during(250).via(tweeny::easing::quadraticInOut)
+                    );
                     LEDSectionStruct target = {
                         calculateSections(currentSelection - 1, 18).startA,
                         calculateSections(currentSelection - 1, 18).endA,
@@ -108,22 +115,33 @@ namespace MOONCAKE
                     animationSections.startB.step(timeElapsed);
                     animationSections.endB.step(timeElapsed);
                 }
+                if (!idleTween.isFinished() && buttonReleaseTween.isFinished()) {
+                    idleTween.step(_time_since_ms(lastTick));
+                }
                 if (releasingButtonNextLoop) {
-                    buttonReleaseTween = tweeny::from((uint8_t) 255).to(0).during(1000).via(tweeny::easing::circularOut);
-                    if (!idleTween.isFinished()) {
-                        idleTween.seek(1.0f);
-                    }
+                    buttonReleaseTween = (
+                        tweeny::from((uint8_t) 255)
+                        .to(100).during(250).via(tweeny::easing::quarticIn)
+                        .to(100).during(3000).via(tweeny::easing::quarticIn)
+                        .to(0).during(3000).via(tweeny::easing::quarticIn)
+                    );
+                    if (idleTween.duration() != 0)
+                        idleTween.jump(2);
                 }
                 
                 if (!buttonReleaseTween.isFinished()) {
                     clearLights();
                     lightsBrightness(buttonReleaseTween.step(_time_since_ms(lastTick)));
                 }
-                else if (idleTween.isFinished()) {
+                else if (idleTween.isFinished() || idleTween.point() > 1) {
                     clearLights();
-                    colorShelvesLights(5);
+                    uint8_t brightness = idleTween.peek();
+                    if (idleTween.duration() == 0) {
+                        brightness = 20;
+                    }
+                    colorShelvesLights(brightness);
                 } else {
-                    uint8_t brightness = idleTween.step(_time_since_ms(lastTick));
+                    uint8_t brightness = idleTween.peek();
                     rgb_t color = {brightness, brightness, brightness};
                     clearLights();
                     LEDSectionStruct ledSectionStruct = {
@@ -215,8 +233,8 @@ namespace MOONCAKE
                 for (int i = 0; i < this->ledCount; ++i)
                 {
                     uint8_t index = std::min((uint8_t)254, (uint8_t)(((hue / 10) + (i * 256 / this->ledCount)) & 0xFF));
-                    rgb_t color = color_from_palette_rgb(palette_rgb, palSize, index, brightness, true);
-                    led_strip_spi_set_pixel_brightness(&led_strip, i, color, 20);
+                    rgb_t color = color_from_palette_rgb(palette_rgb, palSize, index, brightness / 4, true);
+                    led_strip_spi_set_pixel_brightness(&led_strip, i, color, brightness);
                 }
                 hue++;
             }

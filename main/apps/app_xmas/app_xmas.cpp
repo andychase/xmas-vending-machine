@@ -141,7 +141,7 @@ void Xmas::onRunningButtons() {
         releasingButtonNextLoop = false;
     }
 
-    bool cooldownPassed = (startDelayPassed || _time_since_ms(buttonCheckCooldownTick) > 500);
+    bool cooldownPassed = (startDelayPassed || _time_since_ms(buttonCheckCooldownTick) > SCAN_BUTTONS_MS);
     if (buttons->checkReleaseButton()) {
         if (cooldownPassed && !buttons->buttonDown) {
             releasingButtonNextLoop = true;
