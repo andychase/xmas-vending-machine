@@ -7,6 +7,7 @@
 #include "utils/xmas_ui.h"
 #include "utils/xmas_lights.h"
 #include "utils/xmas_buttons.h"
+#include "utils/xmas_sound.h"
 
 
 namespace MOONCAKE
@@ -30,10 +31,13 @@ namespace MOONCAKE
                 bool startDelayPassed = false;
                 bool releasingButtonNextLoop = false;
                 unsigned int currentSelection = 1;
+                unsigned int lastSelection = 1;
+                uint8_t currentSong = 0;
                 
                 class XMAS::XmasLights* lights = nullptr;
                 class XMAS::XmasButtons* buttons = nullptr;
                 class XMAS::UI* ui = nullptr;
+                class XMAS::XmasSound* sound = nullptr;
                 void scanAndUpdateSelection();
             public:
                 XMAS::Data_t _data;

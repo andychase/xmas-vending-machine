@@ -93,6 +93,7 @@ void Xmas::onCreate()
         SDA_GPIO,
         SCL_GPIO
     );
+    if (!sound) sound = new XMAS::XmasSound(I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     delay(10);
     buttons->scanButtons();
     buttonCheckCooldownTick = xTaskGetTickCount();
@@ -165,11 +166,23 @@ void Xmas::onRunningButtons() {
 void Xmas::onRunning()
 {
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
+    if (currentSelection > lastSelection) {
+        sound->playSound(11);
+    } else if (currentSelection < lastSelection) {
+        sound->playSound(12);
+    }
     lights->onRunningLights(currentSelection, releasingButtonNextLoop);
     // Give some time to equalize before checking button
     // startDelayPassed because tick count can overflow
     onRunningButtons();
-    
+    if (!_data.hal->encoder.btn.read()) {
+        while (!_data.hal->encoder.btn.read())
+            delay(5);
+        sound->playSound(currentSong++);
+        if (currentSong >= 13)
+            currentSong = 0;
+    }
+    lastSelection = currentSelection;
     delay(1);
 }
 
