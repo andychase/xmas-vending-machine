@@ -7,6 +7,7 @@
 
 #define PIN_GROUP_SIZE 4    
 #define TOTAL_PINS 16
+#define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) {errorFlag = true; } } while (0)
 
 PinSelection selectPin(int index, const uint8_t (*GROUP)[PIN_GROUP_SIZE])
 {
@@ -49,35 +50,36 @@ namespace MOONCAKE
                 if (ret != ESP_OK)
                 {
                     printf("Failed to initialize I2C driver: %s\n", esp_err_to_name(ret));
+                    errorFlag = true;
                 }
                 for (int addr = 0x21; addr <= 0x24; addr++)
                 {
                     compat_gpio_dev_t* _dev = &dev[addr - 0x21];
-                    gpio_compat_init(_dev, addr, I2C_NUM_1, SDA_GPIO, SCL_GPIO);
+                    CHECK(gpio_compat_init(_dev, addr, I2C_NUM_1, SDA_GPIO, SCL_GPIO));
                 }
 
                 // Make sure other control units have their 0 pin off
                 for (int i = 0; i < 4; i++)
                 {
-                    gpio_compat_set_mode(&dev[i], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
-                    gpio_compat_set_pullup(&dev[i], MCP23017_PIN_BUTTON, true);
+                    CHECK(gpio_compat_set_mode(&dev[i], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT));
+                    CHECK(gpio_compat_set_pullup(&dev[i], MCP23017_PIN_BUTTON, true));
                 }
                 // Lowest shelf control unit handles the button
-                gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT);
+                CHECK(gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT));
                 // Unfortunately due to interferance from i2c and spi can't use it
                 //gpio_compat_set_interrupt(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_INT_LOW_EDGE);
                 // Set latch pins as outputs 
                 for (int i = 0; i < TOTAL_PINS; i++)
                 {
                     sel = selectPin(i, ACTIVE_PINS);
-                    gpio_compat_set_mode(&dev[sel.address], sel.pin, MCP23X17_GPIO_OUTPUT);
+                    CHECK(gpio_compat_set_mode(&dev[sel.address], sel.pin, MCP23X17_GPIO_OUTPUT));
                 }
                 // Sensing buttons
                 for (int i = 0; i < TOTAL_PINS; i++)
                 {
                     sel = selectPin(i, READ_PINS);
-                    gpio_compat_set_mode(&dev[sel.address], sel.pin, MCP23X17_GPIO_INPUT);
-                    gpio_compat_set_pullup(&dev[sel.address], sel.pin, true);
+                    CHECK(gpio_compat_set_mode(&dev[sel.address], sel.pin, MCP23X17_GPIO_INPUT));
+                    CHECK(gpio_compat_set_pullup(&dev[sel.address], sel.pin, true));
                 }
             }
             void XmasButtons::updateLatchState(uint8_t index, bool isClosed)
@@ -96,6 +98,7 @@ namespace MOONCAKE
                     PinSelection sel = selectPin(i, READ_PINS);
                     uint32_t val = 0;
                     ret = gpio_compat_read(&dev[sel.address], sel.pin, &val);
+                    CHECK(ret);
                     if (ret == ESP_OK)
                     {
                         // Closed latches are low (0)
@@ -158,6 +161,7 @@ namespace MOONCAKE
                 esp_err_t ret;
                 uint32_t val = 0;
                 ret = gpio_compat_read(&dev[0], MCP23017_PIN_BUTTON, &val);
+                CHECK(ret);
                 if (ret == ESP_OK)
                 {
                     // Closed latches are low (0)

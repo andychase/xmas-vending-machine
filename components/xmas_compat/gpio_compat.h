@@ -27,9 +27,9 @@ esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint8_t pin, uint32_t val);
 
 void gpio_compat_i2cScan(i2c_port_t i2cPort, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
 
-void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode);
-void gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable);
-void gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr);
+esp_err_t gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode);
+esp_err_t gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable);
+esp_err_t gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr);
 
 #ifdef __cplusplus
 }

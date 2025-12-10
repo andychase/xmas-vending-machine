@@ -62,6 +62,9 @@ namespace MOONCAKE
                                 case UPDATE_LATCH_STATE:
                                     buttons.updateLatchState(cmd.latchIndex, cmd.latchIsClosed);
                                     break;
+                                case SET_ERROR_FLAG:
+                                    errorFlag = true;
+                                    break;
                                 default:
                                     break;
                             }
@@ -155,8 +158,19 @@ namespace MOONCAKE
                 // #FFFDFE main text
                 canvas->setTextColor(canvas->color565(0xFF, 0xFD, 0xFE));
                 canvas->drawCenterString(string, x, y);
+                if (errorFlag) {
+                    canvas->setTextSize(XMAS_FONT_SCALE / 2);
+                    canvas->setTextColor(canvas->color565(0xFF, 0x00, 0x00));
+                    canvas->drawCenterString("!", displayWidth / 2, (displayHeight / 2) + 10);
+                }
                 canvas->pushSprite(0, 0);
                 canvas->setTextSize(1);
+                
+            }
+
+            void UI::drawErrorFlag()
+            {
+                
             }
 
             void UI::drawImgFrame(const xmas_img_t* image, uint8_t frameToDraw, uint8_t x, uint8_t y, int backgroundColor, float scaleX, float scaleY)

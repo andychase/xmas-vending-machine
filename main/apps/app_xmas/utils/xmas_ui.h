@@ -15,7 +15,8 @@ namespace MOONCAKE
         {
             enum UI_COMMANDS {
                 UI_BUTTON_PRESSED,
-                UPDATE_LATCH_STATE
+                UPDATE_LATCH_STATE,
+                SET_ERROR_FLAG,
             };
 
             struct UICommand {
@@ -31,6 +32,7 @@ namespace MOONCAKE
                     void run_task_loop();
                     void buttonPressed();
                     void drawCenterString(const char* string, int32_t x, int32_t yOffset, rgb_t color);
+                    void drawErrorFlag();
                     void drawCenterString(const char* string, int32_t x, int32_t yOffset);
                     void drawImgFrame(const xmas_img_t* image,
                                       uint8_t frameToDraw,
@@ -51,6 +53,7 @@ namespace MOONCAKE
                     void displayOn(bool instant = false);
                     void displayOff();
                     void displayBrightnessAnimate();
+                    
 
                 private:
                     TaskHandle_t s_uiTask = nullptr;
@@ -63,6 +66,7 @@ namespace MOONCAKE
                     int32_t displayHeight;
                     int32_t displayWidth;
                     TickType_t displayOnStart = 0;
+                    bool errorFlag = false;
                     bool idleDisplayOffTriggered = false;
                     tweeny::tween<uint8_t> displayBrightnessAnimation = tweeny::from((uint8_t)255).to((uint8_t)255).during(1);
                     tweeny::tween<int32_t> animationX;

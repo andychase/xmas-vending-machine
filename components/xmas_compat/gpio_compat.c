@@ -47,11 +47,11 @@ esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint8_t pin, uint32_t val) {
     return pcf8575_port_write(dev, temp_val);
 }
 
-void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {
+esp_err_t gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {
     uint32_t temp_val = 0;
     esp_err_t err = pcf8575_port_read(dev, &temp_val);
     if (err != ESP_OK) {
-        return;
+        return err;
     }
     if (mode == MCP23X17_GPIO_INPUT) {
         // Set pin HIGH to make it input (quasi-bidirectional)
@@ -60,14 +60,14 @@ void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mod
         // Set pin LOW to make it output (driving low)
         temp_val &= ~(1 << pin);
     }
-    pcf8575_port_write(dev, temp_val);
+    return pcf8575_port_write(dev, temp_val);
 }
 
 
-void gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable) {}
+esp_err_t gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable) {}
 
 
-void gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr) {}
+esp_err_t gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr) {}
 
 #else
 // Using MCP23X17
@@ -99,18 +99,18 @@ esp_err_t gpio_compat_write(compat_gpio_dev_t *dev, uint8_t pin, uint32_t val) {
     return mcp23x17_set_level(dev, pin, val);
 }
 
-void gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {
-    mcp23x17_set_mode(dev, pin, mode);
+esp_err_t gpio_compat_set_mode(compat_gpio_dev_t *dev, uint8_t pin, mcp23x17_gpio_mode_t mode) {
+    return mcp23x17_set_mode(dev, pin, mode);
 }
 
 
-void gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable) {
-    mcp23x17_set_pullup(dev, pin, enable);
+esp_err_t gpio_compat_set_pullup(compat_gpio_dev_t *dev, uint8_t pin, bool enable) {
+    return mcp23x17_set_pullup(dev, pin, enable);
 }
 
 
-void gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr) {
-    mcp23x17_set_interrupt(dev, pin, intr);
+esp_err_t gpio_compat_set_interrupt(mcp23x17_t *dev, uint8_t pin, mcp23x17_gpio_intr_t intr) {
+    return mcp23x17_set_interrupt(dev, pin, intr);
 }
 
 

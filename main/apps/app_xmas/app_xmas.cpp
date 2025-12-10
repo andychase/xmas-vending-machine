@@ -22,8 +22,6 @@
 
 using namespace MOONCAKE::USER_APP;
 
-static esp_err_t ret;
-
 // Info about buttons
 #ifdef CONFIG_USING_SIMULATOR
 static mcp23x17_t dev[1];
@@ -165,6 +163,9 @@ void Xmas::onRunningButtons() {
 
 void Xmas::onRunning()
 {
+    if (buttons->errorFlag) {
+        ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::SET_ERROR_FLAG, 0, false});
+    }
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
     if (currentSelection > lastSelection) {
         sound->playSound(11);
