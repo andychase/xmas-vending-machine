@@ -42,6 +42,7 @@ namespace XMAS {
         uint8_t getCurrentSelection(int64_t encoderIndex);
         bool buttonDown = false;
         bool errorFlag = false;
+        bool uiSentErrorFlag = false;
 
     private:
         mcp23x17_t* dev;

@@ -165,6 +165,7 @@ void Xmas::onRunning()
 {
     if (buttons->errorFlag) {
         ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::SET_ERROR_FLAG, 0, false});
+        buttons->uiSentErrorFlag = true;
     }
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
     if (currentSelection > lastSelection) {
