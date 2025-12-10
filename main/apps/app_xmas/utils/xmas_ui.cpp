@@ -161,7 +161,7 @@ namespace MOONCAKE
                 if (errorFlag) {
                     canvas->setTextSize(XMAS_FONT_SCALE / 2);
                     canvas->setTextColor(canvas->color565(0xFF, 0x00, 0x00));
-                    canvas->drawCenterString("!", displayWidth / 2, (displayHeight / 2) + 10);
+                    canvas->drawCenterString("!", displayWidth / 2, (displayHeight / 2) + 50);
                 }
                 canvas->pushSprite(0, 0);
                 canvas->setTextSize(1);
