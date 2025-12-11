@@ -5,9 +5,7 @@
 #include <i2cdev.h>
 #include <cstdio>
 
-#define PIN_GROUP_SIZE 4    
-#define TOTAL_PINS 16
-#define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) {errorFlag = true; } } while (0)
+
 
 PinSelection selectPin(int index, const uint8_t (*GROUP)[PIN_GROUP_SIZE])
 {
@@ -88,20 +86,26 @@ namespace MOONCAKE
                 }
                 sensedLatchClosed[index] = isClosed;
             }
-            void XmasButtons::scanButtons()
+            PinScanResult XmasButtons::scanNextButton()
             {
                 esp_err_t ret;
+                lastScannedButton = (lastScannedButton + 1) % TOTAL_PINS;
+                PinSelection sel = selectPin(lastScannedButton, READ_PINS);
+                uint32_t val = 0;
+                ret = gpio_compat_read(&dev[sel.address], sel.pin, &val);
+                CHECK(ret);
+                if (ret == ESP_OK)
+                {
+                    // Closed latches are low (0)
+                    updateLatchState(lastScannedButton, val == 0);
+                }
+                return {lastScannedButton, val == 0};
+            }
+            void XmasButtons::scanAllButtons()
+            {
                 for (int i = 0; i < TOTAL_PINS; i++)
                 {
-                    PinSelection sel = selectPin(i, READ_PINS);
-                    uint32_t val = 0;
-                    ret = gpio_compat_read(&dev[sel.address], sel.pin, &val);
-                    CHECK(ret);
-                    if (ret == ESP_OK)
-                    {
-                        // Closed latches are low (0)
-                        updateLatchState(i, val == 0);
-                    }
+                    scanNextButton();
                 }
             }
             bool XmasButtons::checkLatchIsClosed(uint8_t index)

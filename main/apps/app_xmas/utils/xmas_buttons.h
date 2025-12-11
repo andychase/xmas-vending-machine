@@ -6,10 +6,20 @@
 #include <mcp23x17.h>
 #include <cstdint>
 
+#define PIN_GROUP_SIZE 4    
+#define TOTAL_PINS 16
+#define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) {errorFlag = true; } } while (0)
+
 struct PinSelection
 {
     uint8_t address;
     uint8_t pin;
+};
+
+struct PinScanResult 
+{
+    uint8_t pin;
+    bool isClosed;
 };
 
 namespace MOONCAKE {
@@ -32,7 +42,8 @@ namespace XMAS {
             gpio_num_t SCL_GPIO
         );
         void updateLatchState(uint8_t index, bool isClosed);
-        void scanButtons();
+        void scanAllButtons();
+        PinScanResult scanNextButton();
         void releaseLatch(int selection);
         bool checkReleaseButton();
         bool checkLatchIsClosed(uint8_t index);
@@ -50,6 +61,7 @@ namespace XMAS {
         const uint8_t (*READ_PINS)[4];
         bool sensedLatchClosed[16] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
         int MCP23017_PIN_BUTTON;
+        uint8_t lastScannedButton = 0;
         // Add private members as needed
     };
 } // namespace XMAS

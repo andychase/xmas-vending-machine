@@ -38,7 +38,7 @@ namespace MOONCAKE
                 class XMAS::XmasButtons* buttons = nullptr;
                 class XMAS::UI* ui = nullptr;
                 class XMAS::XmasSound* sound = nullptr;
-                void scanAndUpdateSelection();
+                void scanAndUpdateSelection(bool scanAll = false);
             public:
                 XMAS::Data_t _data;
 

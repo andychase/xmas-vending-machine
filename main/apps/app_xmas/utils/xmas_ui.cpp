@@ -168,11 +168,6 @@ namespace MOONCAKE
                 
             }
 
-            void UI::drawErrorFlag()
-            {
-                
-            }
-
             void UI::drawImgFrame(const xmas_img_t* image, uint8_t frameToDraw, uint8_t x, uint8_t y, int backgroundColor, float scaleX, float scaleY)
             {
                 frameToDraw = frameToDraw % image->framecount;
