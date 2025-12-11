@@ -66,8 +66,6 @@ namespace MOONCAKE
                 }
                 // Lowest shelf control unit handles the button
                 CHECK(gpio_compat_set_mode(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_GPIO_INPUT));
-                // Unfortunately due to interferance from i2c and spi can't use it
-                //gpio_compat_set_interrupt(&dev[0], MCP23017_PIN_BUTTON, MCP23X17_INT_LOW_EDGE);
                 // Set latch pins as outputs 
                 for (int i = 0; i < TOTAL_PINS; i++)
                 {
@@ -168,40 +166,6 @@ namespace MOONCAKE
                     return (val == 0);
                 }
                 return false;
-                // esp_err_t ret;
-                // uint16_t intf;
-                // // Read the interrupt flags (INTF register)
-                // ret = read_reg_16(&dev[0], MCP_REG_INTFA, &intf);
-                // if (ret != ESP_OK)
-                // {
-                //     printf("Failed to read interrupt flags: %s\n", esp_err_to_name(ret));
-                //     return false;
-                // }
-
-                // // Check if BUTTON_PIN caused an interrupt
-                // if (intf & (1 << MCP23017_PIN_BUTTON))
-                // {
-                //     uint16_t intcap;
-
-                //     // Read the interrupt capture register (INTCAP) to get the latched state
-                //     ret = read_reg_16(&dev[0], MCP_REG_INTCAPA, &intcap);
-                //     if (ret != ESP_OK)
-                //     {
-                //         printf("Failed to read interrupt capture register: %s\n", esp_err_to_name(ret));
-                //         return false;
-                //     }
-
-                //     // Clear level
-                //     uint32_t val;
-                //     mcp23x17_get_level(&dev[0], MCP23017_PIN_BUTTON, &val);
-
-                //     // Check if BUTTON_PIN was low (reversed)
-                //     if (!(intcap & (0 << MCP23017_PIN_BUTTON)))
-                //     {
-                //         return true;
-                //     }
-                // }
-                // return false;
             }
         } // namespace XMAS
     } // namespace USER_APP
