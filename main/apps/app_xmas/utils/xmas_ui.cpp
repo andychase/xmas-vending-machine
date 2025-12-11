@@ -33,7 +33,7 @@ namespace MOONCAKE
                 // Just used to track which buttons are latched
                 buttons = XmasButtons();
                 if (!cmdQueue) {
-                    cmdQueue = xQueueCreate(16, sizeof(UICommand));
+                    cmdQueue = xQueueCreate(16 * 3, sizeof(UICommand));
                 }
                 if (!s_uiTask) {
                     xTaskCreate(ui_task_trampoline, "ui_task_runner", 4096, this, 5, &s_uiTask);
