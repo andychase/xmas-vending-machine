@@ -120,7 +120,7 @@ namespace MOONCAKE
                 }
                 if (releasingButtonNextLoop) {
                     buttonReleaseTween = (
-                        tweeny::from((uint8_t) 255)
+                        tweeny::from((uint8_t) 100)
                         .to(100).during(250).via(tweeny::easing::quarticIn)
                         .to(100).during(3000).via(tweeny::easing::quarticIn)
                         .to(0).during(3000).via(tweeny::easing::quarticIn)
