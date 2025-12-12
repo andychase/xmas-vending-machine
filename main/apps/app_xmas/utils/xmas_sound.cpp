@@ -6,6 +6,9 @@
 #include "driver/i2c.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "../../common_define.h"
+
+#define MOTOR_RUN_DURATION_MS 5'000
 
 using namespace MOONCAKE::USER_APP::XMAS;
 
@@ -47,8 +50,31 @@ void XmasSound::stopSound() {
     send_cmd(m_dev, static_cast<uint8_t>(STOP_MUSIC));
 }
 
+void XmasSound::onRunning() {
+    if(motorRunning && _time_since_ms(motorStarted) > MOTOR_RUN_DURATION_MS) {
+        stopMotor();
+    }
+}
+
+void XmasSound::startMotor() {
+    send_cmd(m_dev, static_cast<uint8_t>(START_MOTOR));
+    motorRunning = true;
+    motorStarted = xTaskGetTickCount();
+}
+
 void XmasSound::stopMotor() {
     send_cmd(m_dev, static_cast<uint8_t>(STOP_MOTOR));
+    motorStarted = 0;
+    motorRunning = false;
+}
+
+void XmasSound::selectionSound(uint8_t currentSelection) {
+    if (currentSelection > lastSelection) {
+        playSound(11);
+    } else if (currentSelection < lastSelection) {
+        playSound(12);
+    }
+    lastSelection = currentSelection;
 }
 
 void XmasSound::playSound(uint8_t selection) {

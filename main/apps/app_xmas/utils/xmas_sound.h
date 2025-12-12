@@ -41,13 +41,19 @@ public:
             gpio_num_t gpioSCL
     );
     void stopSound();
+    void onRunning();
+    void startMotor();
     void stopMotor();
+    void selectionSound(uint8_t currentSelection);
     void playSound(uint8_t selection);
 
 private:
     // store the compatibility device descriptor and an initialization flag
     i2c_dev_t m_dev;
+    TickType_t motorStarted;
+    bool motorRunning;
     bool m_initialized = false;
+    uint8_t lastSelection = 1;
 
     // Add private members as needed
 };

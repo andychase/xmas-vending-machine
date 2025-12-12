@@ -31,7 +31,6 @@ namespace MOONCAKE
                 bool startDelayPassed = false;
                 bool releasingButtonNextLoop = false;
                 unsigned int currentSelection = 1;
-                unsigned int lastSelection = 1;
                 uint8_t currentSong = 0;
                 
                 class XMAS::XmasLights* lights = nullptr;

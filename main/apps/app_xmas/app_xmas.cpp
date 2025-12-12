@@ -169,23 +169,19 @@ void Xmas::onRunning()
         buttons->uiSentErrorFlag = true;
     }
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
-    if (currentSelection > lastSelection) {
-        sound->playSound(11);
-    } else if (currentSelection < lastSelection) {
-        sound->playSound(12);
-    }
     lights->onRunningLights(currentSelection, releasingButtonNextLoop);
-    // Give some time to equalize before checking button
-    // startDelayPassed because tick count can overflow
+    sound->selectionSound(currentSelection);
+    sound->onRunning();
     onRunningButtons();
+
     if (!_data.hal->encoder.btn.read()) {
         while (!_data.hal->encoder.btn.read())
             delay(5);
         sound->playSound(currentSong++);
         if (currentSong >= 13)
             currentSong = 0;
+        sound->startMotor();
     }
-    lastSelection = currentSelection;
     delay(1);
 }
 
