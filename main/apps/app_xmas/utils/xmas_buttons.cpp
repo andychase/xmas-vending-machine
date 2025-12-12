@@ -5,7 +5,7 @@
 #include <i2cdev.h>
 #include <cstdio>
 
-
+#define SCAN_BUTTONS_MS 20
 
 PinSelection selectPin(int index, const uint8_t (*GROUP)[PIN_GROUP_SIZE])
 {
@@ -35,12 +35,18 @@ namespace MOONCAKE
                                            mcp23x17_gpio_intr_t MCP23X17_INT_LOW_EDGE,
                                            i2c_port_t I2C_NUM_1,
                                            gpio_num_t SDA_GPIO,
-                                           gpio_num_t SCL_GPIO)
+                                           gpio_num_t SCL_GPIO,
+                                           OnButtonChangeCallback onButtonChangeCallback,
+                                           OnErrorFlagCallback onErrorFlagCallback,
+                                           OnReleaseButtonPressedCallback onReleaseButtonPressed)
             {
                 this->dev = dev;
                 this->ACTIVE_PINS = ACTIVE_PINS;
                 this->READ_PINS = READ_PINS;
                 this->MCP23017_PIN_BUTTON = MCP23017_PIN_BUTTON;
+                this->onButtonChangeCallback = onButtonChangeCallback;
+                this->onErrorFlagCallback = onErrorFlagCallback;
+                this->onReleaseButtonPressed = onReleaseButtonPressed;
                 
                 gpio_compat_i2cScan(I2C_NUM_1, SDA_GPIO, SCL_GPIO);
                 esp_err_t ret = i2cdev_init();
@@ -99,6 +105,8 @@ namespace MOONCAKE
                     // Closed latches are low (0)
                     updateLatchState(lastScannedButton, val == 0);
                 }
+                if (onButtonChangeCallback)
+                    onButtonChangeCallback({lastScannedButton, val == 0});
                 return {lastScannedButton, val == 0};
             }
             void XmasButtons::scanAllButtons()
@@ -170,6 +178,35 @@ namespace MOONCAKE
                     return (val == 0);
                 }
                 return false;
+            }
+            void XmasButtons::onRunning(uint8_t currentSelection)
+            {
+                bool cooldownPassed = (_time_since_ms(buttonCheckCooldownTick) > SCAN_BUTTONS_MS);
+                if (checkReleaseButton()) {
+                    if (cooldownPassed && !buttonDown) {
+                        if (onReleaseButtonPressed)
+                            onReleaseButtonPressed();
+                        // Gives time from light power spike to dissipate
+                        delay(10);
+                        releaseLatch(currentSelection);
+                        scanAllButtons();
+                        buttonDown = true;
+                    }
+                } else if (buttonDown) {
+                    buttonDown = false;
+                    buttonCheckCooldownTick = xTaskGetTickCount();
+                    lastLatchScanTick = buttonCheckCooldownTick;
+                }
+
+                if (_time_since_ms(lastLatchScanTick) > SCAN_BUTTONS_MS) {
+                    scanNextButton();
+                    lastLatchScanTick = xTaskGetTickCount();
+                }
+                if (errorFlag && !uiSentErrorFlag) {
+                    if (onErrorFlagCallback)
+                        onErrorFlagCallback();
+                    uiSentErrorFlag = true;
+                }
             }
         } // namespace XMAS
     } // namespace USER_APP

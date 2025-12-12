@@ -26,10 +26,7 @@ namespace MOONCAKE
         {
             private:
                 const char* _tag = "XMAS";
-                TickType_t lastLatchScanTick = 0;
-                TickType_t buttonCheckCooldownTick = 0;
                 bool startDelayPassed = false;
-                bool releasingButtonNextLoop = false;
                 unsigned int currentSelection = 1;
                 uint8_t currentSong = 0;
                 
@@ -38,6 +35,10 @@ namespace MOONCAKE
                 class XMAS::UI* ui = nullptr;
                 class XMAS::XmasSound* sound = nullptr;
                 void scanAndUpdateSelection(bool scanAll = false);
+                void onErrorFlagCallback();
+                void onButtonChangeCallback(PinScanResult result);
+                void onReleaseButtonPressed();
+
             public:
                 XMAS::Data_t _data;
 

@@ -18,8 +18,6 @@
 #define SECTION_SIZE (LED_COUNT / SECTIONS)
 #define TRANSITION_STEP 1
 
-#define SCAN_BUTTONS_MS 20
-
 using namespace MOONCAKE::USER_APP;
 
 // Info about buttons
@@ -91,15 +89,15 @@ void Xmas::onCreate()
         MCP23X17_INT_LOW_EDGE,
         I2C_NUM_1,
         SDA_GPIO,
-        SCL_GPIO
+        SCL_GPIO,
+        [this](const PinScanResult& result) { this->onButtonChangeCallback(result); },
+        [this]() { this->onErrorFlagCallback(); },
+        [this]() { this->onReleaseButtonPressed(); }
     );
     if (!sound) sound = new XMAS::XmasSound(I2C_NUM_1, SDA_GPIO, SCL_GPIO);
     delay(10);
     buttons->scanAllButtons();
-    buttonCheckCooldownTick = xTaskGetTickCount();
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
-    // Clear latch is closed
-    lastLatchScanTick = xTaskGetTickCount();
 }
 
 void Xmas::playSong(int songId) {
@@ -118,61 +116,26 @@ void Xmas::playSong(int songId) {
     _data.hal->buzz.noTone();
 }
 
-void Xmas::scanAndUpdateSelection(bool scanAll) {
-    PinScanResult result;
-    uint8_t numberToScan = scanAll ? TOTAL_PINS : 1;
-    for (uint8_t i = 0; i < numberToScan; i++) {
-        result = buttons->scanNextButton();
-        ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UPDATE_LATCH_STATE, result.pin, result.isClosed});
-    }
-    currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
+
+void Xmas::onErrorFlagCallback() {
+    ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::SET_ERROR_FLAG, 0, false});
 }
 
-void Xmas::onRunningButtons() {
-    // It's a little confusing but basically:
-    // 1. Don't check button until a cooldown on startup and after the last button press
-    // 2. If the button is pressed, don't do anything until the next loop. This gives the lights effect time to fire.
-    // 3. Once the button is released, reset the cooldown timer.
-    if (releasingButtonNextLoop) {
-        scanAndUpdateSelection(true);
-        ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UI_BUTTON_PRESSED, 0, false});
-        buttons->releaseLatch(currentSelection);
-        scanAndUpdateSelection(true);
-        releasingButtonNextLoop = false;
-    }
+void Xmas::onButtonChangeCallback(PinScanResult result) {
+    ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UPDATE_LATCH_STATE, result.pin, result.isClosed});
+}
 
-    bool cooldownPassed = (startDelayPassed || _time_since_ms(buttonCheckCooldownTick) > SCAN_BUTTONS_MS);
-    if (buttons->checkReleaseButton()) {
-        if (cooldownPassed && !buttons->buttonDown) {
-            releasingButtonNextLoop = true;
-            buttons->buttonDown = true;
-        }
-    } else if (buttons->buttonDown) {
-        buttons->buttonDown = false;
-        startDelayPassed = false;
-        buttonCheckCooldownTick = xTaskGetTickCount();
-        lastLatchScanTick = buttonCheckCooldownTick;
-    }
-
-
-    if (_time_since_ms(lastLatchScanTick) > SCAN_BUTTONS_MS) {
-        scanAndUpdateSelection(false);
-        lastLatchScanTick = xTaskGetTickCount();
-        startDelayPassed = true;
-    }
+void Xmas::onReleaseButtonPressed() {
+    ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UI_BUTTON_PRESSED, 0, false});
+    lights->onRunningLights(currentSelection, true);
 }
 
 void Xmas::onRunning()
 {
-    if (buttons->errorFlag) {
-        ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::SET_ERROR_FLAG, 0, false});
-        buttons->uiSentErrorFlag = true;
-    }
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
-    lights->onRunningLights(currentSelection, releasingButtonNextLoop);
-    sound->selectionSound(currentSelection);
-    sound->onRunning();
-    onRunningButtons();
+    lights->onRunningLights(currentSelection, false);
+    sound->onRunning(currentSelection);
+    buttons->onRunning(currentSelection);
 
     if (!_data.hal->encoder.btn.read()) {
         while (!_data.hal->encoder.btn.read())

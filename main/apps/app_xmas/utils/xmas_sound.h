@@ -41,7 +41,7 @@ public:
             gpio_num_t gpioSCL
     );
     void stopSound();
-    void onRunning();
+    void onRunning(uint8_t currentSelection);
     void startMotor();
     void stopMotor();
     void selectionSound(uint8_t currentSelection);

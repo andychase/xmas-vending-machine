@@ -50,7 +50,8 @@ void XmasSound::stopSound() {
     send_cmd(m_dev, static_cast<uint8_t>(STOP_MUSIC));
 }
 
-void XmasSound::onRunning() {
+void XmasSound::onRunning(uint8_t currentSelection) {
+    selectionSound(currentSelection);
     if(motorRunning && _time_since_ms(motorStarted) > MOTOR_RUN_DURATION_MS) {
         stopMotor();
     }
