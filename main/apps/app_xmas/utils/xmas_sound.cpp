@@ -31,7 +31,7 @@ XmasSound::XmasSound(i2c_port_t i2cPort, gpio_num_t gpioSDA, gpio_num_t gpioSCL)
     m_dev.addr = DEFAULT_I2C_ADDR;
     m_dev.mutex = NULL;
     m_dev.timeout_ticks = 0;
-    m_dev.cfg.master.clk_speed = 20000;
+    m_dev.cfg.master.clk_speed = 100'000;
     m_initialized = true;
     ESP_LOGI(TAG, "XmasSound initialized (addr=0x%02x)", m_dev.addr);
 }

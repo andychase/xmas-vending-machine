@@ -8,7 +8,7 @@
 
 #define PIN_GROUP_SIZE 4    
 #define TOTAL_PINS 16
-#define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) {errorFlag = true; } } while (0)
+#define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) {errorFlag = true; printf("Error: %s\n", esp_err_to_name(__)); } } while (0)
 
 struct PinSelection
 {

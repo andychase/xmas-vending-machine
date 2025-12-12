@@ -11,7 +11,6 @@
 #include "utils/xmas_buttons.h"
 #include "utils/xmas_ui.h"
 
-#define MCP23017_PIN_LED 8    // GPIO pin connected to the LED
 #define MCP23017_PIN_BUTTON 0 // GPIO pin connected to the button
 
 #define SECTIONS 4
@@ -38,7 +37,6 @@ static const uint8_t READ_PINS[4][4] = {{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}
 #define SDA_GPIO GPIO_NUM_13
 #define SCL_GPIO GPIO_NUM_15
 #define USE_ENCODER_FOR_SELECTION 0
-#define RUN_BUTTON_SCAN 1
 #endif
 
 // Info about lights
