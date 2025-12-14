@@ -9,6 +9,7 @@
 #include "../../common_define.h"
 
 #define MOTOR_RUN_DURATION_MS 5'000
+#define MOTOR_START_DELAY_MS 5'000
 
 using namespace MOONCAKE::USER_APP::XMAS;
 
@@ -55,6 +56,10 @@ void XmasSound::onRunning(uint8_t currentSelection) {
     if(motorRunning && _time_since_ms(motorStarted) > MOTOR_RUN_DURATION_MS) {
         stopMotor();
     }
+    if (buttonSequenceRunning && _time_since_ms(buttonPressed) > MOTOR_START_DELAY_MS) {
+        startMotor();
+        buttonSequenceRunning = false;
+    }
 }
 
 void XmasSound::startMotor() {
@@ -70,10 +75,12 @@ void XmasSound::stopMotor() {
 }
 
 void XmasSound::selectionSound(uint8_t currentSelection) {
-    if (currentSelection > lastSelection) {
-        playSound(11);
-    } else if (currentSelection < lastSelection) {
-        playSound(12);
+    if (!buttonSequenceRunning) {
+        if (currentSelection > lastSelection) {
+            playSound(11);
+        } else if (currentSelection < lastSelection) {
+            playSound(12);
+        }
     }
     lastSelection = currentSelection;
 }
@@ -87,4 +94,12 @@ void XmasSound::playSound(uint8_t selection) {
         return;
     }
     send_cmd(m_dev, cmd);
+}
+
+void XmasSound::onButtonPressed() {
+    playSound(currentSong++);
+    if (currentSong > 12)
+        currentSong = 1;
+    buttonSequenceRunning = true;
+    buttonPressed = xTaskGetTickCount();
 }

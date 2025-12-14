@@ -96,6 +96,7 @@ void Xmas::onCreate()
     delay(10);
     buttons->scanAllButtons();
     currentSelection = buttons->getCurrentSelection(_data.hal->encoder.getCount() / 2);
+    sound->lastSelection = currentSelection;
 }
 
 void Xmas::playSong(int songId) {
@@ -126,6 +127,7 @@ void Xmas::onButtonChangeCallback(PinScanResult result) {
 void Xmas::onReleaseButtonPressed() {
     ui->sendCommand({MOONCAKE::USER_APP::XMAS::UI_COMMANDS::UI_BUTTON_PRESSED, 0, false});
     lights->onRunningLights(currentSelection, true);
+    sound->onButtonPressed();
 }
 
 void Xmas::onRunning()
@@ -138,10 +140,7 @@ void Xmas::onRunning()
     if (!_data.hal->encoder.btn.read()) {
         while (!_data.hal->encoder.btn.read())
             delay(5);
-        sound->playSound(currentSong++);
-        if (currentSong >= 13)
-            currentSong = 0;
-        sound->startMotor();
+        sound->onButtonPressed();
     }
     delay(1);
 }

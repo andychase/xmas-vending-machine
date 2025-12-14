@@ -46,16 +46,17 @@ public:
     void stopMotor();
     void selectionSound(uint8_t currentSelection);
     void playSound(uint8_t selection);
-
-private:
-    // store the compatibility device descriptor and an initialization flag
-    i2c_dev_t m_dev;
-    TickType_t motorStarted;
-    bool motorRunning;
-    bool m_initialized = false;
+    void onButtonPressed();
     uint8_t lastSelection = 1;
 
-    // Add private members as needed
+private:
+    i2c_dev_t m_dev;
+    TickType_t motorStarted;
+    TickType_t buttonPressed;
+    bool buttonSequenceRunning = false;
+    bool motorRunning;
+    bool m_initialized = false;
+    uint8_t currentSong = 1;
 };
 } // namespace XMAS
 } // namespace USER_APP

@@ -28,7 +28,6 @@ namespace MOONCAKE
                 const char* _tag = "XMAS";
                 bool startDelayPassed = false;
                 unsigned int currentSelection = 1;
-                uint8_t currentSong = 0;
                 
                 class XMAS::XmasLights* lights = nullptr;
                 class XMAS::XmasButtons* buttons = nullptr;
