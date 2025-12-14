@@ -110,6 +110,11 @@ namespace MOONCAKE
                 PinSelection sel = selectPin(lastScannedButton, READ_PINS);
                 uint32_t val = 0;
                 ret = gpio_compat_read(&dev[sel.address], sel.pin, &val);
+                // Simple try-again if the first read fails
+                if (ret != ESP_OK) {
+                    delay(5);
+                    ret = gpio_compat_read(&dev[sel.address], sel.pin, &val);
+                }
                 CHECK(ret);
                 if (ret == ESP_OK)
                 {
